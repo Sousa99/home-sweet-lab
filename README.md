@@ -60,8 +60,7 @@ Untracked state is moved deliberately, not by Git:
 - **Never committed:** state bundles, backups, `secrets.yaml`, databases, and Tailscale or
   kubeconfig material.
 
-See [`docs/07-secrets-and-unsynced-state.md`](docs/07-secrets-and-unsynced-state.md) and
-[`docs/08-backups-and-recovery.md`](docs/08-backups-and-recovery.md).
+See the secrets and recovery documents listed in [`docs/`](docs/README.md).
 
 ## Repository map
 
@@ -77,8 +76,8 @@ specs/                    Spec-driven deliverables
 
 ## Access
 
-- Kubernetes API: kubeconfig copied from the DietPi host; see
-  [`docs/04-kubeconfig-and-lens.md`](docs/04-kubeconfig-and-lens.md).
+- Kubernetes API: kubeconfig copied from the DietPi host; see the access documents in
+  [`docs/`](docs/README.md).
 - Lens: imports the same kubeconfig and is used for observation, not as a deployment mechanism.
 - Remote access: Tailscale MagicDNS. Real tailnet addresses, hostnames, and credentials are never
   committed.
