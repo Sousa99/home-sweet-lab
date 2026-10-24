@@ -1,19 +1,21 @@
 # Documentation
 
-Ordered setup and recovery documentation for the lab. Phase 2 will fill in each document from the
-verified state of the existing host.
+Ordered setup and recovery documentation for the lab. Documents 01–04 describe the verified existing
+host. Documents 05–08 describe the next phases and are intentionally ahead of execution.
 
 | Document | Covers | Status |
 | -------- | ------ | ------ |
-| `01-hardware-and-dietpi.md` | Host hardware, DietPi installation, updates, timezone, SSH | Planned |
-| `02-k3s.md` | k3s install, verification, storage class, Traefik, upgrade, uninstall | Planned |
-| `03-tailscale.md` | Enrollment, MagicDNS, key expiry, ACLs, status | Planned |
-| `04-kubeconfig-and-lens.md` | kubeconfig copy/merge, permissions, Lens import, rotation | Planned |
-| `05-flux-bootstrap.md` | Flux CLI, token, bootstrap, verification, recovery | Planned |
-| `06-home-assistant.md` | Image, PVC, init containers, ingress, ZBT-2, migration | Planned |
-| `07-secrets-and-unsynced-state.md` | Manual secrets, state bundle creation/upload/restore | Planned |
-| `08-backups-and-recovery.md` | Backup pull, restore drills, full rebuild | Planned |
-| `09-limitations.md` | TLS, single node, Tailscale dependency, storage, discovery | Planned |
+| `01-hardware-and-dietpi.md` | Host hardware, DietPi installation, updates, timezone, SSH | Verified |
+| `02-k3s.md` | k3s install, verification, storage class, Traefik, upgrade, uninstall | Verified |
+| `03-tailscale.md` | Enrollment, MagicDNS, key expiry, ACLs, status | Verified |
+| `04-kubeconfig-and-lens.md` | kubeconfig copy/merge, permissions, Lens import, rotation | Verified |
+| `05-flux-bootstrap.md` | Flux CLI, token, bootstrap, verification, recovery | Documented; execution pending |
+| `06-home-assistant.md` | Image, PVC, init containers, ingress, ZBT-2, migration | Documented; execution pending |
+| `07-secrets-and-unsynced-state.md` | Manual secrets, state bundle creation/upload/restore | Documented; scripts pending |
+| `08-backups-and-recovery.md` | Backup pull, restore drills, full rebuild | Documented; drills pending |
+| `09-limitations.md` | TLS, single node, Tailscale dependency, storage, discovery | Verified |
+
+Host-specific notes and the ZBT-2 udev rule live in [`../host/dietpi/`](../host/dietpi/).
 
 ## Conventions
 

@@ -1,0 +1,6 @@
+# Nabu Casa ZBT-2 (303a:831a) as a stable /dev/zbt2 symlink.
+# Install on the DietPi host:
+#   sudo install -m 0644 99-zbt2.rules /etc/udev/rules.d/
+#   sudo udevadm control --reload-rules
+#   sudo udevadm trigger --subsystem-match=tty
+SUBSYSTEM=="tty", ATTRS{idVendor}=="303a", ATTRS{idProduct}=="831a", SYMLINK+="zbt2", GROUP="dialout", MODE="0660"

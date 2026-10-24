@@ -24,11 +24,27 @@ Mac (development) ──git push──▶ GitHub: home-sweet-lab
 
 ## Status
 
-Phase 1: repository scaffolding, Spec Kit, constitution, and baseline specification.
+Phase 2: the existing DietPi, k3s, Tailscale, kubeconfig, and Lens setup is documented and verified.
+Flux bootstrap and the Home Assistant deployment are specified and documented; execution is next.
 
-The host, Flux, and Home Assistant phases are specified in
-[`specs/001-home-sweet-lab-gitops/spec.md`](specs/001-home-sweet-lab-gitops/spec.md) and will be
-documented under [`docs/`](docs/).
+The baseline specification is
+[`specs/001-home-sweet-lab-gitops/spec.md`](specs/001-home-sweet-lab-gitops/spec.md).
+
+## Documentation
+
+| Document | Covers |
+| -------- | ------ |
+| [01-hardware-and-dietpi](docs/01-hardware-and-dietpi.md) | Host, DietPi, SSH, timezone, disk |
+| [02-k3s](docs/02-k3s.md) | k3s, Traefik, storage, upgrade, uninstall |
+| [03-tailscale](docs/03-tailscale.md) | Enrollment, MagicDNS, ACLs, limits |
+| [04-kubeconfig-and-lens](docs/04-kubeconfig-and-lens.md) | kubeconfig copy/merge, Lens, rotation |
+| [05-flux-bootstrap](docs/05-flux-bootstrap.md) | Flux CLI, token, bootstrap, recovery |
+| [06-home-assistant](docs/06-home-assistant.md) | Image, PVC, ingress, ZBT-2, migration |
+| [07-secrets-and-unsynced-state](docs/07-secrets-and-unsynced-state.md) | Manual secrets and state bundles |
+| [08-backups-and-recovery](docs/08-backups-and-recovery.md) | Backup pull, restore, rebuild |
+| [09-limitations](docs/09-limitations.md) | TLS, storage, security, future work |
+
+Host-specific notes: [`host/dietpi/`](host/dietpi/).
 
 ## Architecture
 
