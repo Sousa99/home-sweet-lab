@@ -1,0 +1,32 @@
+# Local environment
+.env
+.env.*
+!.env.example
+
+# macOS
+.DS_Store
+
+# Kubernetes access
+kubeconfig
+kubeconfig.*
+*.kubeconfig
+.kube/
+
+# Secrets and unsynced Home Assistant state
+secrets/
+.secrets/
+*.secret.yaml
+*.secret.yml
+secrets.yaml
+
+# State bundles and backups
+bundles/
+backups/
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+
+# Temporary validation output
+tmp/
+.artifacts/
