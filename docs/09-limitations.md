@@ -35,6 +35,10 @@ These are deliberate v1 boundaries. They are documented so they are not mistaken
   all interfaces on 6443.
 - Tailscale ACLs are the primary remote-access control. If the host joins an untrusted LAN, add a
   host firewall and restrict access to the tailnet interface.
+- Flux's Kubernetes NetworkPolicies are disabled. On this single-node k3s installation, kube-router
+  left stale default-deny pod firewall rules that blocked controller-to-controller traffic. Pod
+  traffic inside the cluster is therefore unrestricted; namespace separation and Tailscale ACLs are
+  the boundary.
 - The `dietpi` user has passwordless `sudo`. Protect the account and prefer key-based SSH.
 - SSH password authentication is enabled by default. Disable it after key-based access works.
 - The Home Assistant container runs `privileged: true` to access the ZBT-2. This is broader than a
@@ -85,6 +89,9 @@ These are deliberate v1 boundaries. They are documented so they are not mistaken
 - No automated certificate rotation, datastore backup, or configuration drift detection.
 - No SSO for Home Assistant; household accounts are managed in the Home Assistant UI.
 - Recovery drills are manual and must be scheduled.
+- k3s and kube-router have required a service sync restart and a node reboot after network policy
+  changes. Treat network policy changes as maintenance-window work and verify controller traffic
+  afterward.
 - The other `home-sweet-home-*` workloads (agent, dashboard, modules) are not migrated in v1.
 
 ## Future work, roughly ordered
@@ -97,3 +104,4 @@ These are deliberate v1 boundaries. They are documented so they are not mistaken
 6. Pin the Home Assistant base image and test upgrades deliberately.
 7. Move other household workloads into the cluster.
 8. Evaluate replicated storage and a second node only if the household needs high availability.
+9. Re-enable Flux network policies after verifying k3s/kube-router behavior on this node.

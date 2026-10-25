@@ -1,7 +1,7 @@
 # Documentation
 
-Ordered setup and recovery documentation for the lab. Documents 01–04 describe the verified existing
-host. Documents 05–08 describe the next phases and are intentionally ahead of execution.
+Ordered setup and recovery documentation for the lab. Documents 01–05 describe the verified,
+executed state. Documents 06–08 describe the next phases and are intentionally ahead of execution.
 
 | Document | Covers | Status |
 | -------- | ------ | ------ |
@@ -9,7 +9,7 @@ host. Documents 05–08 describe the next phases and are intentionally ahead of 
 | `02-k3s.md` | k3s install, verification, storage class, Traefik, upgrade, uninstall | Verified |
 | `03-tailscale.md` | Enrollment, MagicDNS, key expiry, ACLs, status | Verified |
 | `04-kubeconfig-and-lens.md` | kubeconfig copy/merge, permissions, Lens import, rotation | Verified |
-| `05-flux-bootstrap.md` | Flux CLI, token, bootstrap, verification, recovery | Documented; execution pending |
+| `05-flux-bootstrap.md` | Flux CLI, SSH deploy key, bootstrap, verification, recovery | Executed 2026-10-25; verified |
 | `06-home-assistant.md` | Image, PVC, init containers, ingress, ZBT-2, migration | Documented; execution pending |
 | `07-secrets-and-unsynced-state.md` | Manual secrets, state bundle creation/upload/restore | Documented; scripts pending |
 | `08-backups-and-recovery.md` | Backup pull, restore drills, full rebuild | Documented; drills pending |

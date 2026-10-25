@@ -24,8 +24,8 @@ Mac (development) ──git push──▶ GitHub: home-sweet-lab
 
 ## Status
 
-Phase 2: the existing DietPi, k3s, Tailscale, kubeconfig, and Lens setup is documented and verified.
-Flux bootstrap and the Home Assistant deployment are specified and documented; execution is next.
+Phase 3: Flux `2.9.6` is bootstrapped and reconciling `clusters/dietpi` from `main`. The Home
+Assistant image and deployment are documented and are next.
 
 The baseline specification is
 [`specs/001-home-sweet-lab-gitops/spec.md`](specs/001-home-sweet-lab-gitops/spec.md).
