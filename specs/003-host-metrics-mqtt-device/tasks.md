@@ -38,19 +38,16 @@
 ## Phase 5: Verification
 
 - [X] T021 Build the custom image and run the exporter + a local Mosquitto broker; verify discovery, state, availability, LWT, and HA birth republish.
-- [ ] T022 Commit/push (when explicitly approved) and let the GitHub Actions workflow publish the first GHCR image.
-- [ ] T023 Reconcile Flux; verify the broker and exporter are Ready, the Secret exists, and ACLs allow only the documented topics.
-- [ ] T024 Verify retained discovery/state with `mosquitto_sub`, including the one-device device block and six entity topics.
+- [X] T022 Commit/push (when explicitly approved) and let the GitHub Actions workflow publish the first GHCR image.
+- [X] T023 Reconcile Flux; verify the broker and exporter are Ready, the Secret exists, and ACLs allow only the documented topics.
+- [X] T024 Verify retained discovery/state with `mosquitto_sub`, including the one-device device block and six entity topics.
 - [ ] T025 Add the Home Assistant MQTT integration via the UI; verify one `home-sweet-lab-server` device with six entities and updates within 60 seconds.
 - [ ] T026 Remove the legacy Scrape integration if present; delete orphaned entities; verify no duplicates.
 - [ ] T027 Test exporter restart/LWT, broker restart, HA restart, Secret failure, and node reboot; record results in `docs/12-host-metrics-mqtt.md`.
-- [ ] T028 Security review: no external MQTT, no plaintext credentials in Git, no privileged mode, no Home Assistant repo changes.
-- [ ] T029 Final validation and diff review; commit/push when explicitly requested.
+- [X] T028 Security review: no external MQTT, no plaintext credentials in Git, no privileged mode, no Home Assistant repo changes.
+- [X] T029 Final validation and diff review; commit/push when explicitly requested.
 
 ## Pending / Blocked
 
-- T022 requires explicit commit/push approval.
-- T023/T024 require the first GHCR image and Flux reconciliation.
 - T025/T026 require the operator to perform the Home Assistant MQTT UI steps and remove legacy Scrape.
-- T027 requires the node reboot and recovery drills.
-- T028/T029 require the deployed 003 workload and final review.
+- T027 requires the Secret-failure and coordinated node-reboot drills.

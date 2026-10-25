@@ -151,7 +151,7 @@ recovery path.
 ## Pending / Blocked
 
 - T032 requires a coordinated maintenance-window node reboot and post-reboot Flux verification.
-- T036 requires the operator to perform the manual Home Assistant UI steps and a node-reboot window; P1 and the non-UI P3 checks are complete.
+- T036 is superseded by the MQTT UI in `specs/003-host-metrics-mqtt-device/`; do not create legacy Scrape sensors. Use `docs/12-host-metrics-mqtt.md` instead.
 
 ## Dependencies & Execution Order
 

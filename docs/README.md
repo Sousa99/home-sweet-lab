@@ -18,7 +18,7 @@ drills remain a maintenance-window task.
 | `09-limitations.md` | Access, single node, Tailscale dependency, storage, discovery | Verified |
 | `10-ui-to-git.md` | Reverse-sync UI YAML changes for review and commit | Script tested 2026-10-25 |
 | `11-host-metrics.md` | HTTP exporter, metric contract, legacy Scrape UI, recovery | Deployed; legacy Scrape reference |
-| `12-host-metrics-mqtt.md` | MQTT broker, one-device discovery, HA MQTT UI, migration, recovery | Implemented; image/HA verification pending |
+| `12-host-metrics-mqtt.md` | MQTT broker, one-device discovery, HA MQTT UI, migration, recovery | Deployed via Flux; HA MQTT UI/reboot verification pending |
 
 Host-specific notes and the ZBT-2 udev rule live in [`../host/dietpi/`](../host/dietpi/).
 

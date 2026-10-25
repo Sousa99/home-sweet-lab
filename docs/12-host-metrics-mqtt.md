@@ -38,18 +38,21 @@ Traefik, Tailscale, a LoadBalancer, a NodePort, or a host port.
 
 ## Verification status (2026-10-25)
 
-- The custom exporter image was built locally and the paho-gated tests pass.
-- A local Mosquitto broker with the two-user ACL was tested with the exporter image:
-  discovery, state, availability, authentication, ACL denial, and Last Will offline were observed.
-- The broker manifests were applied temporarily to `monitoring`: the broker became Ready, the
-  `exporter` user could publish, the `homeassistant` user could read and write only its allowed
-  topics, and a denied write did not change retained state. The temporary broker and Secret were
-  removed after the check.
-- Still pending: the first GHCR image publication, Flux reconciliation of the committed MQTT
-  manifests, the Home Assistant MQTT integration, removal of legacy Scrape sensors, and the node
-  reboot drill.
+- The first GHCR image was published as
+  `ghcr.io/sousa99/home-sweet-lab-host-metrics:main-20261025232617-290e420` and is anonymously
+  pullable.
+- Flux reconciled `main@3b15d54`; the `mosquitto` and `host-metrics` Deployments are Ready in
+  `monitoring`, and the MQTT Secret exists.
+- Retained discovery for all six entities, retained state, and all four availability topics were
+  verified with the `homeassistant` and `exporter` users.
+- Auth and ACL behavior were verified: exporter publish, HA read, HA write to
+  `homeassistant/status`, and denied writes that did not change retained state.
+- Exporter deletion produced `online` → `offline` → `online` on the main availability topic.
+- Broker deletion/restart produced a reconnect and full discovery/state/availability republish.
+- Publishing `homeassistant/status=online` caused the exporter to republish discovery.
 
-Real IP addresses are omitted from this document.
+Still pending: the manual Home Assistant MQTT integration, removal of the legacy Scrape integration,
+the Secret-failure drill, and the node-reboot drill.
 
 ## 1. Create the MQTT Secret
 
