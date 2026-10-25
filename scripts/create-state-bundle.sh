@@ -8,6 +8,7 @@ config_dir="${HOME_ASSISTANT_CONFIG_DIR:-$repo_root/../home-sweet-home/home-swee
 output_dir="$repo_root/bundles"
 include_database=1
 include_media=1
+backups_dir_override=""
 
 usage() {
     cat <<'EOF'
@@ -16,6 +17,8 @@ Usage: create-state-bundle.sh [options]
 Options:
   --config-dir DIR     Home Assistant config directory
                        (default: ../home-sweet-home/home-sweet-home-home-assistant/config)
+  --backups-dir DIR    Directory containing Home Assistant backup archives
+                       (default: config/backups, then ../backups if non-empty)
   --output DIR         Output directory (default: <repo>/bundles)
   --no-database        Exclude the recorder history database
   --no-media           Exclude media, TTS, and HACS assets
@@ -26,6 +29,7 @@ EOF
 while [ $# -gt 0 ]; do
     case "$1" in
         --config-dir) config_dir="$2"; shift 2 ;;
+        --backups-dir) backups_dir_override="$2"; shift 2 ;;
         --output) output_dir="$2"; shift 2 ;;
         --no-database) include_database=0; shift ;;
         --no-media) include_media=0; shift ;;
@@ -39,8 +43,22 @@ if [ ! -d "$config_dir" ]; then
     exit 1
 fi
 
+if [ -n "$backups_dir_override" ]; then
+    if [ ! -d "$backups_dir_override" ]; then
+        echo "backups directory not found: $backups_dir_override" >&2
+        exit 1
+    fi
+    backups_dir="$(cd "$backups_dir_override" && pwd)"
+elif [ -d "$config_dir/backups" ] && [ -n "$(ls -A "$config_dir/backups" 2>/dev/null)" ]; then
+    backups_dir="$(cd "$config_dir/backups" && pwd)"
+elif [ -d "$config_dir/../backups" ] && [ -n "$(ls -A "$config_dir/../backups" 2>/dev/null)" ]; then
+    backups_dir="$(cd "$config_dir/../backups" && pwd)"
+else
+    backups_dir=""
+fi
+
 paths=()
-for path in .storage secrets.yaml zigbee.db blueprints backups; do
+for path in .storage secrets.yaml zigbee.db blueprints; do
     [ -e "$config_dir/$path" ] && paths+=("$path")
 done
 
@@ -56,7 +74,7 @@ if [ "$include_media" -eq 1 ]; then
     done
 fi
 
-if [ ${#paths[@]} -eq 0 ]; then
+if [ ${#paths[@]} -eq 0 ] && [ -z "$backups_dir" ]; then
     echo "nothing to archive in $config_dir" >&2
     exit 1
 fi
@@ -66,10 +84,18 @@ stamp="$(date +%Y%m%d-%H%M%S)"
 bundle="$output_dir/home-assistant-state-$stamp.tar.gz"
 
 echo "Creating $bundle"
-echo "  config: $config_dir"
-printf '  paths:  %s\n' "${paths[*]}"
+echo "  config:  $config_dir"
+echo "  backups: ${backups_dir:-none}"
+printf '  paths:   %s\n' "${paths[*]:-}"
 
-tar -czf "$bundle" -C "$config_dir" "${paths[@]}"
+tar_cmd=(tar -czf "$bundle" -C "$config_dir")
+if [ ${#paths[@]} -gt 0 ]; then
+    tar_cmd+=("${paths[@]}")
+fi
+if [ -n "$backups_dir" ]; then
+    tar_cmd+=(-C "$(dirname "$backups_dir")" "$(basename "$backups_dir")")
+fi
+"${tar_cmd[@]}"
 
 if command -v sha256sum >/dev/null 2>&1; then
     sha256sum "$bundle" | awk '{print $1}' > "$bundle.sha256"
