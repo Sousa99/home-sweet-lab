@@ -1,0 +1,106 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: home-assistant
+  namespace: home-assistant
+  labels:
+    app.kubernetes.io/name: home-assistant
+    app.kubernetes.io/part-of: home-sweet-lab
+spec:
+  replicas: 0
+  strategy:
+    type: Recreate
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: home-assistant
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: home-assistant
+        app.kubernetes.io/part-of: home-sweet-lab
+    spec:
+      terminationGracePeriodSeconds: 30
+      initContainers:
+        - name: seed-config
+          image: ghcr.io/sousa99/home-sweet-home-home-assistant:main-20261025082658-0b3b51b
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - cp -a /config-seed/. /config/
+          volumeMounts:
+            - name: config
+              mountPath: /config
+
+        - name: restore-state
+          image: ghcr.io/sousa99/home-sweet-home-home-assistant:main-20261025082658-0b3b51b
+          imagePullPolicy: IfNotPresent
+          command:
+            - /usr/local/bin/restore-state.sh
+          env:
+            - name: ZHA_SERIAL_PATH
+              value: /dev/zbt2
+            - name: ZHA_FLOW_CONTROL
+              value: hardware
+            - name: ZHA_BAUDRATE
+              value: "460800"
+          volumeMounts:
+            - name: config
+              mountPath: /config
+
+      containers:
+        - name: home-assistant
+          image: ghcr.io/sousa99/home-sweet-home-home-assistant:main-20261025082658-0b3b51b # {"$imagepolicy": "flux-system:home-assistant"}
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: TZ
+              value: Europe/Lisbon
+          ports:
+            - name: http
+              containerPort: 8123
+              protocol: TCP
+          securityContext:
+            privileged: true
+          startupProbe:
+            httpGet:
+              path: /manifest.json
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            httpGet:
+              path: /manifest.json
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /manifest.json
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 5
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: zbt2
+              mountPath: /dev/zbt2
+
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: home-assistant-config
+        - name: zbt2
+          hostPath:
+            path: /dev/zbt2
+            type: CharDevice

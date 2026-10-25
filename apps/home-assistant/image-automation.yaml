@@ -1,0 +1,47 @@
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageRepository
+metadata:
+  name: home-assistant
+  namespace: flux-system
+spec:
+  image: ghcr.io/sousa99/home-sweet-home-home-assistant
+  interval: 5m
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImagePolicy
+metadata:
+  name: home-assistant
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: home-assistant
+  filterTags:
+    pattern: '^main-[0-9]{14}-[0-9a-f]{7}$'
+  policy:
+    alphabetical:
+      order: asc
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageUpdateAutomation
+metadata:
+  name: home-assistant
+  namespace: flux-system
+spec:
+  interval: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  git:
+    checkout:
+      ref:
+        branch: main
+    commit:
+      author:
+        name: fluxcdbot
+        email: fluxcdbot@users.noreply.github.com
+      messageTemplate: 'chore: update home-assistant image'
+    push:
+      branch: main
+  update:
+    strategy: Setters
+    path: ./apps/home-assistant
