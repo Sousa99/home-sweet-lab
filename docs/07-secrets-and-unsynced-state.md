@@ -96,8 +96,9 @@ cd ~/Desktop/code/home-sweet-lab
 ```
 
 The script defaults to `../home-sweet-home/home-sweet-home-home-assistant/config` and writes a
-timestamped archive plus `.sha256` into `bundles/`. The created and checksum files are ignored by
-Git.
+timestamped archive plus `.sha256` into `bundles/`. It uses `config/backups` when that directory has
+files; otherwise it uses the sibling repository `backups/` directory, which is the Compose host
+mount. `--backups-dir` overrides the choice. The created and checksum files are ignored by Git.
 
 Use `--config-dir` for a different configuration, `--no-database` to omit recorder history, or
 `--no-media` to omit media, TTS, and HACS assets. The checksum file contains the hash in its first

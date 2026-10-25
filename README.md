@@ -24,9 +24,10 @@ Mac (development) ──git push──▶ GitHub: home-sweet-lab
 
 ## Status
 
-Phase 4: Flux reconciles the Home Assistant deployment from `main`. Home Assistant runs in the
-cluster from the published image, private state lives on a 10 GiB PVC, and the UI is reachable at
-`http://dietpi/`. Zigbee is connected through `/dev/zbt2`.
+Phase 5: Flux reconciles the Home Assistant deployment from `main`. Home Assistant runs from the
+published image, private state lives on a 10 GiB PVC, and the UI is reachable at `http://dietpi/`.
+Zigbee is connected through `/dev/zbt2`. Backup pulls, manifest validation, and restore hardening
+are in place; the destructive full-rebuild drills remain a maintenance-window task.
 
 The baseline specification is
 [`specs/001-home-sweet-lab-gitops/spec.md`](specs/001-home-sweet-lab-gitops/spec.md).

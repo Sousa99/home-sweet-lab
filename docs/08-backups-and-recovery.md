@@ -1,6 +1,6 @@
 # 08 — Backups and recovery
 
-Status: procedures documented; drills are executed after Phase 4.
+Status: pull script implemented; drills executed on 2026-10-25.
 
 ## What must survive
 
@@ -26,32 +26,28 @@ Git is not a backup of household state. The PVC is not a backup either: it is th
 
 ## Pull backups to the Mac
 
-Home Assistant writes backups to `/config/backups` on the PVC. Pull them deliberately.
-
-With the pod running:
+Home Assistant writes backups to `/config/backups` on the PVC. Pull them with:
 
 ```bash
-mkdir -p ~/backups/home-sweet-lab
-pod="$(kubectl -n home-assistant get pods -o jsonpath='{.items[0].metadata.name}')"
-kubectl -n home-assistant cp \
-  "$pod:/config/backups/." \
-  "$HOME/backups/home-sweet-lab/"
+cd ~/Desktop/code/home-sweet-lab
+./scripts/pull-backups.sh
 ```
 
-If `kubectl cp` fails because the container lacks `tar`, use a helper pod or stream a tar:
+The default destination is `~/backups/home-sweet-lab/<timestamp>`. Override it with `--dest DIR`.
+The script uses the running Home Assistant pod, or creates a temporary helper pod if Home Assistant is
+stopped. It writes `SHA256SUMS` and verifies every file.
 
-```bash
-kubectl -n home-assistant exec deploy/home-assistant -- \
-  tar -C /config/backups -czf - . > "$HOME/backups/home-sweet-lab/backups-$(date +%Y%m%d-%H%M%S).tar.gz"
+On 2026-10-25 the drill pulled five files and all checksums matched:
+
+```text
+~/backups/home-sweet-lab/20261025-drill/
+├── Automatic_backup_*.tar
+├── README.md
+└── SHA256SUMS
 ```
 
-Verify every archive before trusting it:
-
-```bash
-cd "$HOME/backups/home-sweet-lab"
-shasum -a 256 ./*.tar.gz > SHA256SUMS
-shasum -a 256 -c SHA256SUMS
-```
+The PVC currently contains the pre-migration backup archives copied from the Mac. Create a fresh
+backup from the Home Assistant UI or an automation before relying on the current set.
 
 Keep at least one copy outside the house, encrypted. A backup on the same NVMe as the live state is
 not disaster recovery.
@@ -90,8 +86,8 @@ kubectl -n home-assistant rollout status deployment/home-assistant --timeout=10m
    ```
 
 2. Let Flux recreate the PVC, or apply `apps/home-assistant/pvc.yaml`.
-3. Upload the newest state bundle to a helper pod on the new PVC.
-4. Restart Home Assistant and watch the `restore-state` init container.
+3. Upload the newest state bundle with `scripts/upload-state-bundle.sh`.
+4. Restart Home Assistant and watch `restore-state` and `configure-http`.
 5. If the bundle is incomplete, restore a Home Assistant backup from the UI instead.
 
 ### Full cluster rebuild
@@ -135,17 +131,36 @@ Recreate it from the password manager, restart the workload, and verify. Record 
 Re-run the bootstrap command from [05-flux-bootstrap.md](05-flux-bootstrap.md). The repository
 contains the desired state.
 
-## Drill checklist
+## Drill results — 2026-10-25
 
-Run these on the real cluster, not in theory:
+| Drill | Result |
+| ----- | ------ |
+| Delete the Home Assistant pod with the PVC intact | Passed: new pod ready in under one minute; `http://dietpi/` returned `200`; `configure-http` reported already configured |
+| Create/upload a state bundle | Passed during migration: bundle applied, retained under `import/applied/` |
+| Re-upload the same bundle | Passed: restore reported `already applied` and did not extract again |
+| Corrupt bundle checksum | Passed: restore exited non-zero and left the archive in place |
+| Archive with `../` path traversal | Passed after hardening: restore refused the archive before extraction |
+| Pull backups and verify checksums | Passed: five files pulled; every SHA-256 matched |
+| Image automation | Passed: Flux selected and deployed the published tag |
+| Full PVC loss and restore | Not executed: destructive, requires a maintenance window |
+| Full cluster rebuild | Not executed: requires a maintenance window |
+| Missing ZBT-2 | Not executed: would disconnect Zigbee; fail-fast behavior is documented |
+| Restore a backup through the Home Assistant UI | Not executed: requires UI authentication and a maintenance window |
+| Secret scan of both repositories | Passed: `gitleaks` found no leaks |
 
-- [ ] Delete the Home Assistant pod with the PVC intact; it returns without data loss.
-- [ ] Create a state bundle, upload it to a scratch PVC, and verify the restore.
-- [ ] Corrupt a bundle checksum; confirm the restore refuses and the workload still starts.
-- [ ] Pull a backup, verify its checksum, and restore it through the Home Assistant UI.
-- [ ] Simulate a missing ZBT-2; confirm the failure is visible and recoverable after reconnecting.
-- [ ] Rebuild the cluster from documentation in under 60 minutes.
-- [ ] Confirm no secret, kubeconfig, bundle, or backup exists in either public repository.
+The full PVC and cluster rebuild drills must be run before treating the recovery time objective as
+proven.
+
+## Validation
+
+Run the local checks before merging:
+
+```bash
+./scripts/validate.sh
+```
+
+This renders the app Kustomization, validates Kubernetes schemas with `kubeconform`, lints YAML with
+`yamllint`, and scans for secrets with `gitleaks`. The same checks run in GitHub Actions.
 
 ## Automation is future work
 

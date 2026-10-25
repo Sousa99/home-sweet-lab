@@ -6,7 +6,7 @@ Status: deployed and verified on 2026-10-25.
 
 | Item | Current |
 | ---- | ------- |
-| Image | `ghcr.io/sousa99/home-sweet-home-home-assistant:main-20261025084504-004e937` |
+| Image | `ghcr.io/sousa99/home-sweet-home-home-assistant:main-20261025090622-dd38b4b` |
 | Deployment | 1/1 ready, strategy `Recreate` |
 | PVC | `home-assistant-config`, 10 GiB, `Bound` on `local-path` |
 | Ingress | Traefik `PathPrefix(/)`, `http://dietpi/` returns `200` |
@@ -401,7 +401,7 @@ main container. That keeps the init scripts and the running Home Assistant image
 image: ghcr.io/sousa99/home-sweet-home-home-assistant:main-20261024120000-abcdef0 # {"$imagepolicy": "flux-system:home-assistant"}
 ```
 
-Bootstrap with `--read-write-key`; otherwise the push fails. The deploy key is write-enabled.
+The deploy key must be write-enabled; otherwise the image update push fails.
 
 ## Verification
 
@@ -423,7 +423,7 @@ Verified on 2026-10-25:
 - Deployment `1/1`; PVC `Bound` with 10 GiB.
 - `.storage/http` contains `use_x_forwarded_for: true` and the two cluster CIDRs.
 - The Home Assistant process holds `/dev/zbt2`; `zigbee.db` was updated at startup.
-- Flux image automation selected `main-20261025084504-004e937`.
+- Flux image automation selected `main-20261025090622-dd38b4b`.
 
 Inside the pod:
 
