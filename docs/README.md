@@ -1,7 +1,7 @@
 # Documentation
 
-Ordered setup and recovery documentation for the lab. Documents 01–05 describe the verified,
-executed state. Documents 06–08 describe the next phases and are intentionally ahead of execution.
+Ordered setup and recovery documentation for the lab. Documents 01–07 describe the verified,
+executed state. Document 08 remains the next phase.
 
 | Document | Covers | Status |
 | -------- | ------ | ------ |
@@ -10,8 +10,8 @@ executed state. Documents 06–08 describe the next phases and are intentionally
 | `03-tailscale.md` | Enrollment, MagicDNS, key expiry, ACLs, status | Verified |
 | `04-kubeconfig-and-lens.md` | kubeconfig copy/merge, permissions, Lens import, rotation | Verified |
 | `05-flux-bootstrap.md` | Flux CLI, SSH deploy key, bootstrap, verification, recovery | Executed 2026-10-25; verified |
-| `06-home-assistant.md` | Image, PVC, init containers, ingress, ZBT-2, migration | Documented; execution pending |
-| `07-secrets-and-unsynced-state.md` | Manual secrets, state bundle creation/upload/restore | Documented; scripts pending |
+| `06-home-assistant.md` | Image, PVC, init containers, ingress, ZBT-2, migration | Deployed 2026-10-25; verified |
+| `07-secrets-and-unsynced-state.md` | Manual secrets, state bundle creation/upload/restore | Scripts implemented; migration exercised |
 | `08-backups-and-recovery.md` | Backup pull, restore drills, full rebuild | Documented; drills pending |
 | `09-limitations.md` | TLS, single node, Tailscale dependency, storage, discovery | Verified |
 

@@ -1,6 +1,6 @@
 # 07 — Secrets and unsynced state
 
-Status: procedure documented; scripts land in Phase 5.
+Status: scripts implemented; migration exercised on 2026-10-25.
 
 Both repositories are public. Git contains only configuration that is safe to publish. Everything
 else lives on the persistent volume and moves through explicit, documented operations.
@@ -11,7 +11,7 @@ else lives on the persistent volume and moves through explicit, documented opera
 | ---- | ------- | -------- |
 | Tracked YAML | `configuration.yaml`, automations, scripts, scenes, dashboards | Built into the image from the configuration repository |
 | `blueprints/` | Downloaded or manually added blueprints | PVC only; state bundle |
-| `.storage/` | Integration credentials, entity registry, UI-managed dashboards, ZHA config | PVC only; state bundle |
+| `.storage/` | Integration credentials, entity registry, UI-managed dashboards, ZHA and HTTP config | PVC only; state bundle |
 | `secrets.yaml` | Home Assistant `!secret` values | PVC only; state bundle; never Git |
 | `zigbee.db` | Zigbee network state | PVC only; state bundle |
 | `home-assistant_v2.db*` | History and recorder database | PVC only; state bundle |
@@ -76,100 +76,77 @@ The bundle is the supported way to move private state between the Mac and the cl
 - `tts/`
 - `www/community/`
 
-Excluded: tracked YAML, logs, `.cache/`, `deps/`, and anything already in the image.
+Excluded: tracked YAML, logs, `.cache/`, `deps/`, and anything already in the image. Use
+`--no-database` or `--no-media` when a smaller bundle is acceptable.
 
 ### Create
 
 Stop Home Assistant before creating a bundle so `.storage` and SQLite are consistent:
 
 ```bash
-# Old Mac deployment
+cd ~/Desktop/code/home-sweet-home/home-sweet-home-home-assistant
 docker compose stop home-assistant
 ```
 
-Until `scripts/create-state-bundle.sh` exists, use an equivalent shell block:
+Run from the `home-sweet-lab` repository root:
 
 ```bash
-bundle="home-assistant-state-$(date +%Y%m%d-%H%M%S).tar.gz"
-paths=()
-for p in .storage secrets.yaml zigbee.db blueprints backups \
-         home-assistant_v2.db home-assistant_v2.db-wal home-assistant_v2.db-shm \
-         media tts www/community; do
-  [ -e "config/$p" ] && paths+=("$p")
-done
-tar -czf "$bundle" -C config "${paths[@]}"
-# macOS
-shasum -a 256 "$bundle" | awk '{print $1}' > "$bundle.sha256"
-# Linux
-# sha256sum "$bundle" | awk '{print $1}' > "$bundle.sha256"
-ls -lh "$bundle" "$bundle.sha256"
+cd ~/Desktop/code/home-sweet-lab
+./scripts/create-state-bundle.sh
 ```
 
-The checksum file contains the hash in its first field. The restore step compares that value before
-extracting.
+The script defaults to `../home-sweet-home/home-sweet-home-home-assistant/config` and writes a
+timestamped archive plus `.sha256` into `bundles/`. The created and checksum files are ignored by
+Git.
 
-Restart the old deployment if it is still in service:
+Use `--config-dir` for a different configuration, `--no-database` to omit recorder history, or
+`--no-media` to omit media, TTS, and HACS assets. The checksum file contains the hash in its first
+field; the restore step compares that value before extracting.
 
-```bash
-docker compose start home-assistant
-```
+The Mac deployment is retired after migration. Do not start it again while the cluster owns the
+ZBT-2.
 
 ### Upload
 
-Create a temporary pod that mounts the PVC, copy the archive into `/config/import/`, then delete the
-pod. The namespace and PVC must already exist.
+Run from the repository root:
 
 ```bash
-kubectl -n home-assistant apply -f - <<'EOF'
-apiVersion: v1
-kind: Pod
-metadata:
-  name: ha-upload
-spec:
-  restartPolicy: Never
-  containers:
-    - name: upload
-      image: alpine:3.20
-      command: ["sh", "-c", "sleep 3600"]
-      volumeMounts:
-        - name: config
-          mountPath: /config
-  volumes:
-    - name: config
-      persistentVolumeClaim:
-        claimName: home-assistant-config
-EOF
-
-kubectl -n home-assistant wait --for=condition=Ready pod/ha-upload --timeout=120s
-kubectl -n home-assistant exec ha-upload -- mkdir -p /config/import
-kubectl -n home-assistant cp ./home-assistant-state-<timestamp>.tar.gz \
-  ha-upload:/config/import/
-kubectl -n home-assistant cp ./home-assistant-state-<timestamp>.tar.gz.sha256 \
-  ha-upload:/config/import/
-kubectl -n home-assistant delete pod ha-upload
+./scripts/upload-state-bundle.sh bundles/home-assistant-state-<timestamp>.tar.gz
 ```
 
-Restart Home Assistant so the restore init container runs:
+The script creates a temporary `ha-upload` pod that mounts the PVC, copies the archive and checksum
+into `/config/import/`, and deletes the pod. The helper pod also triggers `local-path` provisioning
+when the PVC is still `Pending`.
+
+Restart Home Assistant so the restore init container runs. Because Flux manages the Deployment, do
+not use `kubectl rollout restart`; delete the pod and let the ReplicaSet recreate it:
 
 ```bash
-kubectl -n home-assistant rollout restart deployment/home-assistant
+kubectl -n home-assistant delete pod -l app.kubernetes.io/name=home-assistant
 kubectl -n home-assistant rollout status deployment/home-assistant --timeout=10m
 kubectl -n home-assistant logs deploy/home-assistant -c restore-state
+kubectl -n home-assistant logs deploy/home-assistant -c configure-http
 ```
 
-If Flux manages the Deployment and a rollout restart would be reverted, use
-`kubectl delete pod -n home-assistant -l app.kubernetes.io/name=home-assistant` instead; the
-ReplicaSet recreates it and the init containers run again.
+For the first migration, commit the Deployment with `replicas: 0`, upload the bundle, then commit
+`replicas: 1`. That avoids starting Home Assistant against an empty volume.
 
 ### Restore behavior
 
 - The script verifies the checksum before touching `/config`.
+- It rejects absolute paths and `..` path traversal.
 - A mismatch or extraction failure exits non-zero and leaves the archive in `/config/import/` for
   inspection.
+- After extraction, the image patches ZHA to `/dev/zbt2` with hardware flow control and 460800 baud.
 - Applied archives move to `/config/import/applied/` and are not re-applied on the next restart.
 - To apply a new bundle, upload it with a new filename. To re-apply the same content, upload it
   under a new name or remove its marker from `applied/` deliberately.
 - Keep at least the previous bundle until the new state has been verified.
+- The 2026-10-25 migration applied
+  `home-assistant-state-20261025-083605.tar.gz`; it remains under `import/applied/`.
+
+The `configure-http` init container separately enforces the reverse-proxy settings in
+`.storage/http`. See [06-home-assistant.md](06-home-assistant.md).
 
 ### Never commit
 

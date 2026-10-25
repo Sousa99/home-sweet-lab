@@ -79,6 +79,9 @@ These are deliberate v1 boundaries. They are documented so they are not mistaken
   coordinator should block startup.
 - The image contains tracked YAML only. Manual edits to tracked files on the server are overwritten
   at the next pod start.
+- Home Assistant 2026.8+ stores HTTP server settings in `.storage/http` and deprecates the `http:`
+  block in `configuration.yaml`. The cluster enforces reverse-proxy trust through an init container;
+  do not re-add the YAML block.
 - The GHCR package must stay public or the cluster needs an image pull secret.
 - Flux image automation needs a read-write deploy key; a read-only bootstrap key silently prevents
   image tag write-back.

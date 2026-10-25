@@ -1,6 +1,19 @@
 # 06 — Home Assistant
 
-Status: design documented; deployment happens in Phase 4.
+Status: deployed and verified on 2026-10-25.
+
+## Current state
+
+| Item | Current |
+| ---- | ------- |
+| Image | `ghcr.io/sousa99/home-sweet-home-home-assistant:main-20261025084504-004e937` |
+| Deployment | 1/1 ready, strategy `Recreate` |
+| PVC | `home-assistant-config`, 10 GiB, `Bound` on `local-path` |
+| Ingress | Traefik `PathPrefix(/)`, `http://dietpi/` returns `200` |
+| HTTP proxy | `.storage/http` trusts `10.42.0.0/16` and `10.43.0.0/16` |
+| ZHA | `/dev/zbt2`, 460800, hardware flow control; serial device held by Home Assistant |
+| State | Bundle `home-assistant-state-20261025-083605.tar.gz` applied and retained under `import/applied/` |
+| Flux | `apps` and `flux-system` Kustomizations `Ready` |
 
 ## Model
 
@@ -38,13 +51,18 @@ In `home-sweet-home-home-assistant`:
 FROM ghcr.io/home-assistant/home-assistant:stable
 COPY config/ /config-seed/
 COPY scripts/restore-state.sh /usr/local/bin/restore-state.sh
-RUN chmod +x /usr/local/bin/restore-state.sh
+COPY scripts/fix-zha-serial.py /usr/local/bin/fix-zha-serial.py
+COPY scripts/fix-http-proxy.py /usr/local/bin/fix-http-proxy.py
+RUN chmod 0755 /usr/local/bin/restore-state.sh \
+    /usr/local/bin/fix-zha-serial.py \
+    /usr/local/bin/fix-http-proxy.py
 ```
 
 `.dockerignore` must exclude at least:
 
 ```text
 config/.storage
+config/.cloud
 config/secrets.yaml
 config/backups
 config/blueprints
@@ -59,6 +77,10 @@ config/www/community
 config/deps
 backups
 .env
+.git
+.github
+docs
+README.md
 ```
 
 The publish workflow tags images as `main-YYYYMMDDHHMMSS-<sha7>`. The timestamp prefix makes
@@ -118,6 +140,23 @@ initContainers:
   - name: restore-state
     image: ghcr.io/sousa99/home-sweet-home-home-assistant:main-<timestamp>-<sha>
     command: ["/usr/local/bin/restore-state.sh"]
+    env:
+      - name: ZHA_SERIAL_PATH
+        value: /dev/zbt2
+      - name: ZHA_FLOW_CONTROL
+        value: hardware
+      - name: ZHA_BAUDRATE
+        value: "460800"
+    volumeMounts:
+      - name: config
+        mountPath: /config
+
+  - name: configure-http
+    image: ghcr.io/sousa99/home-sweet-home-home-assistant:main-<timestamp>-<sha>
+    command: ["/usr/local/bin/fix-http-proxy.py"]
+    env:
+      - name: HTTP_TRUSTED_PROXIES
+        value: "10.42.0.0/16,10.43.0.0/16"
     volumeMounts:
       - name: config
         mountPath: /config
@@ -128,9 +167,13 @@ The restore script:
 1. Creates `/config/import/` and `/config/import/applied/`.
 2. Walks `/config/import/*.tar.gz`.
 3. Verifies the matching `.sha256` before extraction.
-4. Extracts into `/config`.
-5. Moves the archive to `applied/` and records its checksum so restarts do not re-apply it.
-6. Exits non-zero on a checksum or extraction failure.
+4. Rejects absolute paths and `..` path traversal.
+5. Extracts into `/config`.
+6. Patches ZHA to the cluster serial device through `fix-zha-serial.py`.
+7. Moves the archive to `applied/` and records its checksum so restarts do not re-apply it.
+8. Exits non-zero on a checksum or extraction failure.
+
+`configure-http` then calls `fix-http-proxy.py` before Home Assistant starts.
 
 ### Home Assistant container
 
@@ -167,17 +210,31 @@ Path-based routing is used so no tailnet name is committed and the app is reacha
 `http://dietpi/`. When more apps are added, move to host-based routing with a neutral internal name
 or the MagicDNS FQDN, and update this document.
 
-Home Assistant must trust the ingress proxy. In the configuration repository:
+### HTTP proxy configuration (Home Assistant 2026.8+)
 
-```yaml
-http:
-  use_x_forwarded_for: true
-  trusted_proxies:
-    - 10.42.0.0/16
-    - 10.43.0.0/16
+Home Assistant 2026.8 deprecated the `http:` block in `configuration.yaml` and now stores HTTP server
+settings in `.storage/http`. The YAML block still validates but is ignored at runtime, which produces
+a confusing `400` and this log line:
+
+```text
+A request from a reverse proxy was received from 10.42.0.x, but your HTTP integration is not set-up for reverse proxies
 ```
 
-Use the cluster pod and service CIDRs. Do not trust arbitrary networks.
+The `configure-http` init container runs `fix-http-proxy.py` before Home Assistant starts. The script
+is idempotent and sets:
+
+```json
+{
+  "use_x_forwarded_for": true,
+  "trusted_proxies": ["10.42.0.0/16", "10.43.0.0/16"]
+}
+```
+
+It also sets `pending` to `null` and `yaml_migration_done` to `true`, and keeps a timestamped backup
+of `.storage/http`. Do not add the deprecated `http:` block to `configuration.yaml`; it will be
+ignored and may cause a repair issue.
+
+Use the cluster pod CIDR for the Traefik pod. Do not trust arbitrary networks.
 
 ## ZBT-2 serial device
 
@@ -240,8 +297,17 @@ unavailable. A small wait script may log a clear warning and optionally fail the
 ### ZHA reconfiguration after migration
 
 The existing Mac setup uses the RFC2217 bridge
-`rfc2217://host.docker.internal:6638`. That address does not exist in the cluster. After restoring
-state, open ZHA and reconfigure the radio:
+`rfc2217://host.docker.internal:6638`, which does not exist in the cluster. The restore init
+container calls `fix-zha-serial.py`, which rewrites every ZHA config entry to:
+
+- path `/dev/zbt2`
+- flow control `hardware`
+- baud rate `460800`
+
+It keeps a timestamped backup of `.storage/core.config_entries`. On 2026-10-25 the Home Assistant
+process held `/dev/zbt2` open and `zigbee.db` was updated after startup.
+
+If the automatic patch is disabled (`ZHA_SERIAL_PATH` unset) or fails, reconfigure through the UI:
 
 1. **Settings → Devices & Services → ZHA → Reconfigure**.
 2. Serial device: `/dev/zbt2` (or the by-id path).
@@ -249,9 +315,8 @@ state, open ZHA and reconfigure the radio:
 4. Baud rate: `460800`.
 5. Flow control: hardware.
 
-Verify that the coordinator and the Living Room devices return. If ZHA refuses the change, stop
-Home Assistant, edit the ZHA entry in `.storage/core.config_entries` only as a last resort, and
-restore from a backup if the file is damaged.
+If ZHA refuses the change, stop Home Assistant and edit the ZHA entry in
+`.storage/core.config_entries` only as a last resort; keep the generated backup.
 
 ## First migration from the Mac
 
@@ -261,12 +326,18 @@ restore from a backup if the file is damaged.
    docker compose stop home-assistant
    ```
 
-2. Create the state bundle with `scripts/create-state-bundle.sh` (Phase 5).
-3. Apply the namespace and PVC, but keep Home Assistant scaled to zero for the first start.
-4. Upload the bundle to `/config/import/` through a helper pod (Phase 5).
-5. Scale Home Assistant to one and follow the logs until the restore init finishes.
+2. Create the state bundle with `scripts/create-state-bundle.sh`. The script defaults to
+   `../home-sweet-home/home-sweet-home-home-assistant/config` and writes to `bundles/`.
+3. Commit the app with `replicas: 0` so the PVC exists without starting Home Assistant.
+4. Upload the bundle with `scripts/upload-state-bundle.sh`. The helper pod triggers `local-path`
+   provisioning and copies the archive into `/config/import/`.
+5. Set `replicas: 1`, commit, and follow the `seed-config`, `restore-state`, and `configure-http`
+   init containers until Home Assistant starts.
 6. Verify entities, integrations, dashboards, secrets, ZHA, and backups.
 7. Pull a fresh backup back to the Mac and verify its checksum.
+
+The Mac Compose deployment is stopped after migration and should not be started again while the
+cluster owns the ZBT-2.
 
 If the volume is empty and no bundle is uploaded, Home Assistant starts with the tracked YAML and
 onboarding. That is acceptable only for a new installation.
@@ -274,7 +345,7 @@ onboarding. That is acceptable only for a new installation.
 ## Image automation
 
 ```yaml
-apiVersion: image.toolkit.fluxcd.io/v1beta2
+apiVersion: image.toolkit.fluxcd.io/v1
 kind: ImageRepository
 metadata:
   name: home-assistant
@@ -283,7 +354,7 @@ spec:
   image: ghcr.io/sousa99/home-sweet-home-home-assistant
   interval: 5m
 ---
-apiVersion: image.toolkit.fluxcd.io/v1beta2
+apiVersion: image.toolkit.fluxcd.io/v1
 kind: ImagePolicy
 metadata:
   name: home-assistant
@@ -297,7 +368,7 @@ spec:
     alphabetical:
       order: asc
 ---
-apiVersion: image.toolkit.fluxcd.io/v1beta2
+apiVersion: image.toolkit.fluxcd.io/v1
 kind: ImageUpdateAutomation
 metadata:
   name: home-assistant
@@ -344,6 +415,14 @@ curl -I http://dietpi/
 
 Expected: pod `Running`, PVC `Bound`, service present, ingress route present, and the UI reachable
 over the tailnet.
+
+Verified on 2026-10-25:
+
+- `curl -s -o /dev/null -w '%{http_code}' http://dietpi/` returned `200`.
+- Deployment `1/1`; PVC `Bound` with 10 GiB.
+- `.storage/http` contains `use_x_forwarded_for: true` and the two cluster CIDRs.
+- The Home Assistant process holds `/dev/zbt2`; `zigbee.db` was updated at startup.
+- Flux image automation selected `main-20261025084504-004e937`.
 
 Inside the pod:
 
