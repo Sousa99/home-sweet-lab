@@ -12,6 +12,7 @@ Status: pull script implemented; drills executed on 2026-10-25.
 | Home Assistant backups | PVC `/config/backups` | Pulled copies on the Mac and offsite storage |
 | k3s datastore | DietPi `/var/lib/rancher/k3s/server/db` | Cold copy on the host or external disk |
 | Manual Kubernetes Secrets | Cluster | Password manager |
+| Tailscale operator OAuth client | Cluster `operator-oauth` Secret and Tailscale admin console | Password manager / Tailscale admin console |
 | kubeconfig and Tailscale auth | Operator devices | Regenerate / re-enroll |
 
 Git is not a backup of household state. The PVC is not a backup either: it is the live copy.
@@ -94,11 +95,13 @@ kubectl -n home-assistant rollout status deployment/home-assistant --timeout=10m
 
 1. Follow [01-hardware-and-dietpi.md](01-hardware-and-dietpi.md) through
    [05-flux-bootstrap.md](05-flux-bootstrap.md).
-2. Confirm Flux reconciles `home-sweet-lab`.
-3. Recreate manual Secrets.
+2. Recreate the Tailscale `operator-oauth` Secret in the `tailscale` namespace before Flux installs
+   the operator. Create a new OAuth client if the old credentials are unavailable.
+3. Confirm Flux reconciles `home-sweet-lab` and the Tailscale operator/Ingress become ready.
 4. Apply the PVC and upload the newest state bundle.
 5. Start Home Assistant and verify integrations, ZHA, dashboards, and automations.
-6. Pull a fresh backup and verify it.
+6. Verify `https://home-assistant.<tailnet>.ts.net/` returns `200`.
+7. Pull a fresh backup and verify it.
 
 ### k3s datastore recovery
 
@@ -135,13 +138,14 @@ contains the desired state.
 
 | Drill | Result |
 | ----- | ------ |
-| Delete the Home Assistant pod with the PVC intact | Passed: new pod ready in under one minute; `http://dietpi/` returned `200`; `configure-http` reported already configured |
+| Delete the Home Assistant pod with the PVC intact | Passed: new pod ready in under one minute; `https://home-assistant.<tailnet>.ts.net/` returned `200`; `configure-http` reported already configured |
 | Create/upload a state bundle | Passed during migration: bundle applied, retained under `import/applied/` |
 | Re-upload the same bundle | Passed: restore reported `already applied` and did not extract again |
 | Corrupt bundle checksum | Passed: restore exited non-zero and left the archive in place |
 | Archive with `../` path traversal | Passed after hardening: restore refused the archive before extraction |
 | Pull backups and verify checksums | Passed: five files pulled; every SHA-256 matched |
 | Image automation | Passed: Flux selected and deployed the published tag |
+| Tailscale Ingress and TLS certificate | Passed: the operator created the proxy, MagicDNS name, and certificate; HTTPS returned `200` |
 | Full PVC loss and restore | Not executed: destructive, requires a maintenance window |
 | Full cluster rebuild | Not executed: requires a maintenance window |
 | Missing ZBT-2 | Not executed: would disconnect Zigbee; fail-fast behavior is documented |

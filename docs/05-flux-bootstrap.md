@@ -149,11 +149,13 @@ clusters/dietpi/
 │   ├── gotk-components.yaml
 │   ├── gotk-sync.yaml
 │   └── kustomization.yaml
-├── infrastructure.yaml       # added in a later phase
-└── apps.yaml                 # added in a later phase
+├── infrastructure.yaml       # Tailscale operator HelmRelease
+└── apps.yaml                 # Home Assistant; depends on infrastructure
 ```
 
-The root Kustomization recursively reconciles the files in `clusters/dietpi/`.
+The root Kustomization recursively reconciles the files in `clusters/dietpi/`. `infrastructure`
+installs the Tailscale operator; `apps` waits for it through `dependsOn`. The operator's
+`operator-oauth` Secret is created manually and is not managed by Flux.
 
 ## Network policy exception
 

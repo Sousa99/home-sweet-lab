@@ -4,19 +4,24 @@ These are deliberate v1 boundaries. They are documented so they are not mistaken
 
 ## Access and TLS
 
-- Home Assistant is served over HTTP on the tailnet. WireGuard encrypts transit, but the browser
-  does not get a secure context.
-- Some browser features (clipboard, geolocation, camera APIs) and some Home Assistant integrations
-  expect HTTPS. Expect warnings or reduced functionality.
-- Tailscale Serve on port 443 conflicts with the Traefik service load balancer. Enabling HTTPS
-  requires moving Traefik to port 80, adopting the Tailscale Kubernetes Operator, or adding
-  cert-manager with DNS validation.
-- MagicDNS provides `<host>.<tailnet>.ts.net` only. Arbitrary subdomains need Tailscale Serve or the
-  Operator.
-- The k3s API certificate includes the Tailscale IP and short hostname, not the MagicDNS FQDN. Use
-  the IP in kubeconfig or add the FQDN to `tls-san` and restart k3s.
-- Tailscale is a cloud dependency for coordination and remote access. Local automations, Zigbee, and
-  LAN access continue if it is unavailable.
+- Home Assistant is served with HTTPS at `https://home-assistant.<tailnet>.ts.net/`. The Tailscale
+  Kubernetes Operator creates the proxy device, the MagicDNS name, and a Tailscale-issued
+  certificate.
+- The certificate covers the Tailscale hostname only. It is not a public certificate; access is
+  limited to tailnet devices.
+- The operator is an additional controller and a cloud dependency. If the operator or its ingress
+  proxy is down, the Home Assistant URL is unavailable, although the Home Assistant pod and local
+  automations keep running.
+- The OAuth client used by the operator is a manual Secret. It must be recreated after a cluster
+  rebuild and rotated deliberately.
+- The host's Traefik still binds ports 80 and 443. Do not enable Tailscale Serve on the host while
+  Traefik holds those ports; the operator does not use host ports.
+- The root URL `http://dietpi/` no longer serves Home Assistant. It is available for a future
+  landing page or other apps.
+- The k3s API certificate includes the host Tailscale IP and short hostname, not the host MagicDNS
+  FQDN. Use the IP in kubeconfig or add the FQDN to `tls-san` and restart k3s.
+- Tailscale is a cloud dependency for coordination, remote access, and certificates. Zigbee control,
+  automations, and local Home Assistant operation continue if it is unavailable.
 
 ## Single node and storage
 
@@ -101,8 +106,8 @@ These are deliberate v1 boundaries. They are documented so they are not mistaken
 
 1. Pull backups off the node automatically and verify them.
 2. Add monitoring and alerting for node, Flux, PVC, and Home Assistant.
-3. Decide on TLS: Tailscale Serve with Traefik on 80, or the Tailscale Kubernetes Operator.
-4. Add a secret manager or SOPS with age for reproducible secrets.
+3. Add a landing page or dashboard at `/`.
+4. Add a secret manager or SOPS with age for reproducible secrets, including `operator-oauth`.
 5. Narrow device access instead of `privileged: true`.
 6. Pin the Home Assistant base image and test upgrades deliberately.
 7. Move other household workloads into the cluster.

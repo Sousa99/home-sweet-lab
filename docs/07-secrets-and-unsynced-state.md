@@ -18,7 +18,7 @@ else lives on the persistent volume and moves through explicit, documented opera
 | `backups/` | Home Assistant backup archives | PVC only; pulled to the Mac |
 | `media/`, `tts/`, `www/community/` | Local media, generated TTS, HACS assets | PVC only; state bundle |
 | `home-assistant.log*`, `.cache/`, `deps/` | Logs and regenerable caches | Not backed up |
-| Kubernetes Secrets | Future cluster credentials | Manual `kubectl`; never Git |
+| Kubernetes Secrets | Cluster credentials, including `operator-oauth` | Manual `kubectl`; never Git |
 
 The current Home Assistant configuration has no `secrets.yaml`; verify before assuming one exists.
 `.storage` still contains integration credentials and must be treated as secret.
@@ -26,6 +26,39 @@ The current Home Assistant configuration has no `secrets.yaml`; verify before as
 ## Manual Kubernetes Secrets
 
 Flux does not manage Secrets in v1. Create them directly and record their purpose here.
+
+### Tailscale operator OAuth
+
+The Tailscale Kubernetes Operator needs a long-lived OAuth client. It is stored in the manual Secret
+`operator-oauth` in the `tailscale` namespace:
+
+| Key | Value |
+| --- | ----- |
+| `client_id` | Tailscale OAuth client ID |
+| `client_secret` | Tailscale OAuth client secret |
+
+The OAuth client is tagged `tag:k8s-operator` and has **Services**, **Devices → Core**, and
+**Auth Keys** read/write. The Secret is not managed by Flux and is not part of the Home Assistant
+state bundle. After a cluster rebuild, recreate it before Flux installs the operator.
+
+Rotation:
+
+1. Create a new OAuth client with the same scopes and tag.
+2. Replace the Secret:
+
+   ```bash
+   kubectl -n tailscale create secret generic operator-oauth \
+     --from-literal=client_id='<new-id>' \
+     --from-literal=client_secret='<new-secret>' \
+     --dry-run=client -o yaml | kubectl apply -f -
+   ```
+
+3. Restart the operator pod:
+   `kubectl -n tailscale delete pod -l app.kubernetes.io/name=tailscale-operator`
+4. Verify `https://home-assistant.<tailnet>.ts.net/` still returns `200`.
+5. Revoke the old OAuth client in the Tailscale admin console.
+
+### Home Assistant secrets
 
 ```bash
 kubectl create namespace home-assistant --dry-run=client -o yaml | kubectl apply -f -

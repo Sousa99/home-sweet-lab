@@ -7,10 +7,10 @@ executed state. The destructive full-rebuild drills remain a maintenance-window 
 | -------- | ------ | ------ |
 | `01-hardware-and-dietpi.md` | Host hardware, DietPi installation, updates, timezone, SSH | Verified |
 | `02-k3s.md` | k3s install, verification, storage class, Traefik, upgrade, uninstall | Verified |
-| `03-tailscale.md` | Enrollment, MagicDNS, key expiry, ACLs, status | Verified |
+| `03-tailscale.md` | Enrollment, MagicDNS, key expiry, ACLs, operator, HTTPS | Verified; operator and HTTPS enabled |
 | `04-kubeconfig-and-lens.md` | kubeconfig copy/merge, permissions, Lens import, rotation | Verified |
 | `05-flux-bootstrap.md` | Flux CLI, SSH deploy key, bootstrap, verification, recovery | Executed 2026-10-25; verified |
-| `06-home-assistant.md` | Image, PVC, init containers, ingress, ZBT-2, migration | Deployed 2026-10-25; verified |
+| `06-home-assistant.md` | Image, PVC, init containers, Tailscale Ingress, ZBT-2, migration | Deployed 2026-10-25; verified |
 | `07-secrets-and-unsynced-state.md` | Manual secrets, state bundle creation/upload/restore | Scripts implemented; migration exercised |
 | `08-backups-and-recovery.md` | Backup pull, restore drills, full rebuild | Pull/restore drills executed 2026-10-25; full rebuild pending |
 | `09-limitations.md` | TLS, single node, Tailscale dependency, storage, discovery | Verified |

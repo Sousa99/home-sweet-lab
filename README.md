@@ -18,16 +18,19 @@ Mac (development) ──git push──▶ GitHub: home-sweet-lab
                     │
                     ├── home-assistant namespace
                     │     ├── Deployment (image from the HA repository)
-                    │     └── PVC (state, history, backups)
-                    └── Traefik ──▶ Tailscale MagicDNS
+                    │     ├── PVC (state, history, backups)
+                    │     └── Tailscale Ingress ──▶ home-assistant.<tailnet>.ts.net
+                    ├── tailscale namespace (operator + ingress proxy)
+                    └── Traefik ──▶ future apps at /
 ```
 
 ## Status
 
 Phase 5: Flux reconciles the Home Assistant deployment from `main`. Home Assistant runs from the
-published image, private state lives on a 10 GiB PVC, and the UI is reachable at `http://dietpi/`.
-Zigbee is connected through `/dev/zbt2`. Backup pulls, manifest validation, and restore hardening
-are in place; the destructive full-rebuild drills remain a maintenance-window task.
+published image, private state lives on a 10 GiB PVC, and the UI is served with HTTPS at
+`https://home-assistant.<tailnet>.ts.net/`. Zigbee is connected through `/dev/zbt2`. Backup pulls,
+manifest validation, and restore hardening are in place; the destructive full-rebuild drills remain
+a maintenance-window task.
 
 The baseline specification is
 [`specs/001-home-sweet-lab-gitops/spec.md`](specs/001-home-sweet-lab-gitops/spec.md).
@@ -44,7 +47,7 @@ The baseline specification is
 | [06-home-assistant](docs/06-home-assistant.md) | Image, PVC, ingress, ZBT-2, migration |
 | [07-secrets-and-unsynced-state](docs/07-secrets-and-unsynced-state.md) | Manual secrets and state bundles |
 | [08-backups-and-recovery](docs/08-backups-and-recovery.md) | Backup pull, restore, rebuild |
-| [09-limitations](docs/09-limitations.md) | TLS, storage, security, future work |
+| [09-limitations](docs/09-limitations.md) | Access, storage, security, future work |
 
 Host-specific notes: [`host/dietpi/`](host/dietpi/).
 
@@ -54,8 +57,9 @@ Host-specific notes: [`host/dietpi/`](host/dietpi/).
 | ----- | --------- | ----- |
 | Host | Old PC running DietPi | This repository (documented) |
 | Cluster | k3s, Traefik, `local-path` storage | This repository |
+| Ingress | Tailscale Kubernetes Operator for Home Assistant; Traefik for future apps | This repository |
 | GitOps | Flux controllers in `flux-system` | This repository |
-| Network | Tailscale on the host, MagicDNS | This repository (documented) |
+| Network | Tailscale on the host and the Kubernetes Operator, MagicDNS, HTTPS | This repository (documented) |
 | Deployment | Home Assistant manifests, image tag | This repository |
 | Configuration | Home Assistant YAML, automations, dashboards | `home-sweet-home-home-assistant` |
 | Private state | `.storage`, DBs, `secrets.yaml`, backups | Manual, never committed |
@@ -99,8 +103,9 @@ specs/                    Spec-driven deliverables
 - Lens: imports the same kubeconfig and is used for observation, not as a deployment mechanism.
 - Remote access: Tailscale MagicDNS. Real tailnet addresses, hostnames, and credentials are never
   committed.
-- Home Assistant: served through Traefik on the host's Tailscale interface, HTTP for now. TLS and
-  the Tailscale Operator are deferred and documented as limitations.
+- Home Assistant: `https://home-assistant.<tailnet>.ts.net/`, served by the Tailscale Kubernetes
+  Operator with a Tailscale-issued certificate. The host's Traefik no longer serves Home Assistant;
+  `/` is free for a future landing page.
 
 ## Related repositories
 
@@ -113,8 +118,9 @@ specs/                    Spec-driven deliverables
 
 ## Non-goals for v1
 
-High availability, replicated storage, automatic TLS, multi-node scheduling, automated offsite
-backups, and migrating the other `home-sweet-home-*` workloads. The layout leaves room for them.
+High availability, replicated storage, public TLS/cert-manager, multi-node scheduling, automated
+offsite backups, and migrating the other `home-sweet-home-*` workloads. The layout leaves room for
+them.
 
 ## Safety rules
 

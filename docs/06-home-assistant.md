@@ -9,7 +9,7 @@ Status: deployed and verified on 2026-10-25.
 | Image | `ghcr.io/sousa99/home-sweet-home-home-assistant:main-20261025090622-dd38b4b` |
 | Deployment | 1/1 ready, strategy `Recreate` |
 | PVC | `home-assistant-config`, 10 GiB, `Bound` on `local-path` |
-| Ingress | Traefik `PathPrefix(/)`, `http://dietpi/` returns `200` |
+| Ingress | Tailscale Ingress class, `https://home-assistant.<tailnet>.ts.net/` returns `200`; `http://dietpi/` returns `404` |
 | HTTP proxy | `.storage/http` trusts `10.42.0.0/16` and `10.43.0.0/16` |
 | ZHA | `/dev/zbt2`, 460800, hardware flow control; serial device held by Home Assistant |
 | State | Bundle `home-assistant-state-20261025-083605.tar.gz` applied and retained under `import/applied/` |
@@ -32,7 +32,11 @@ ghcr.io/sousa99/home-sweet-home-home-assistant:main-<timestamp>-<sha>
 home-sweet-lab/apps/home-assistant
   init: seed tracked YAML from /config-seed
   init: restore uploaded state bundle
+  init: configure HTTP proxy trust
   HA:   official image + /config PVC + /dev/zbt2
+        │
+        ▼
+Tailscale Ingress ──▶ https://home-assistant.<tailnet>.ts.net
 ```
 
 Rules:
@@ -91,7 +95,7 @@ The GHCR package must be public so the cluster can pull it without an image pull
 
 ## Kubernetes resources
 
-Planned under `apps/home-assistant/`:
+Managed under `apps/home-assistant/`:
 
 | Resource | Purpose |
 | -------- | ------- |
@@ -99,7 +103,7 @@ Planned under `apps/home-assistant/`:
 | `pvc.yaml` | 10 GiB `local-path` claim mounted at `/config` |
 | `deployment.yaml` | Seed init, restore init, Home Assistant container, ZBT-2 mount |
 | `service.yaml` | ClusterIP on port 8123 |
-| `ingressroute.yaml` | Traefik route from the tailnet address to the service |
+| `tailscale-ingress.yaml` | Tailscale Ingress for `home-assistant.<tailnet>.ts.net` |
 | `image-automation.yaml` | Flux image repository, policy, and update automation |
 | `kustomization.yaml` | Assembles the app |
 
@@ -190,25 +194,30 @@ The restore script:
 
 ### Ingress
 
+Home Assistant is exposed by the Tailscale Kubernetes Operator, not by Traefik.
+
 ```yaml
-apiVersion: traefik.io/v1alpha1
-kind: IngressRoute
+apiVersion: networking.k8s.io/v1
+kind: Ingress
 metadata:
   name: home-assistant
   namespace: home-assistant
 spec:
-  entryPoints: [web]
-  routes:
-    - match: PathPrefix(`/`)
-      kind: Rule
-      services:
-        - name: home-assistant
-          port: 8123
+  ingressClassName: tailscale
+  defaultBackend:
+    service:
+      name: home-assistant
+      port:
+        number: 8123
+  tls:
+    - hosts:
+        - home-assistant
 ```
 
-Path-based routing is used so no tailnet name is committed and the app is reachable at
-`http://dietpi/`. When more apps are added, move to host-based routing with a neutral internal name
-or the MagicDNS FQDN, and update this document.
+The operator creates the Tailscale proxy device, the MagicDNS name
+`home-assistant.<tailnet>.ts.net`, and a Tailscale-issued TLS certificate. The repository only stores
+the short hostname `home-assistant`, never the tailnet FQDN. The old Traefik `IngressRoute` was
+removed; `http://dietpi/` no longer serves Home Assistant.
 
 ### HTTP proxy configuration (Home Assistant 2026.8+)
 
@@ -234,7 +243,7 @@ It also sets `pending` to `null` and `yaml_migration_done` to `true`, and keeps 
 of `.storage/http`. Do not add the deprecated `http:` block to `configuration.yaml`; it will be
 ignored and may cause a repair issue.
 
-Use the cluster pod CIDR for the Traefik pod. Do not trust arbitrary networks.
+Use the cluster pod CIDR for the Tailscale ingress proxy. Do not trust arbitrary networks.
 
 ## ZBT-2 serial device
 
@@ -409,17 +418,20 @@ The deploy key must be write-enabled; otherwise the image update push fails.
 flux get image repository -A
 flux get image policy -A
 flux get image update -A
-kubectl -n home-assistant get pods,pvc,svc,ingressroute
+kubectl -n home-assistant get pods,pvc,svc,ingress
+kubectl -n tailscale get pods
 kubectl -n home-assistant logs deploy/home-assistant --tail=100
+curl -I https://home-assistant.<tailnet>.ts.net/
 curl -I http://dietpi/
 ```
 
-Expected: pod `Running`, PVC `Bound`, service present, ingress route present, and the UI reachable
-over the tailnet.
+Expected: pod `Running`, PVC `Bound`, the Ingress has a MagicDNS address, the new HTTPS URL works,
+and `http://dietpi/` returns `404`.
 
 Verified on 2026-10-25:
 
-- `curl -s -o /dev/null -w '%{http_code}' http://dietpi/` returned `200`.
+- `https://home-assistant.<tailnet>.ts.net/` returned `200`; `http://dietpi/` returned `404`.
+- The Ingress address is the operator-generated MagicDNS name; the TLS certificate is valid.
 - Deployment `1/1`; PVC `Bound` with 10 GiB.
 - `.storage/http` contains `use_x_forwarded_for: true` and the two cluster CIDRs.
 - The Home Assistant process holds `/dev/zbt2`; `zigbee.db` was updated at startup.
@@ -451,3 +463,5 @@ kubectl -n home-assistant exec deploy/home-assistant -- \
 - `.storage` contains integration credentials; it lives on the PVC.
 - `secrets.yaml`, if used, is created manually and never committed. See
   [07-secrets-and-unsynced-state.md](07-secrets-and-unsynced-state.md).
+- The Tailscale operator's `operator-oauth` Secret is manual and never committed. It is not part of
+  the Home Assistant state bundle and must be recreated after a cluster rebuild.
