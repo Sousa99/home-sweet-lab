@@ -28,13 +28,14 @@ Mac (development) ──git push──▶ GitHub: home-sweet-lab
 
 ## Status
 
-Phase 6: Host-metrics exporter manifests, unit tests, and the operator guide are implemented.
-Flux reconciliation of the exporter and the manual Home Assistant sensor steps remain the final
-verification steps. Home Assistant continues to run from the published image, private state lives
-on a 10 GiB PVC, and the UI is served with HTTPS at
-`https://home-assistant.<tailnet>.ts.net/`. Zigbee is connected through `/dev/zbt2`. Backup pulls,
-manifest validation, and restore hardening are in place; the destructive full-rebuild drills remain
-a maintenance-window task.
+Phase 6: Flux reconciles the host-metrics exporter from `main` into the `monitoring` namespace.
+The exporter is Ready on `dietpi`, its ClusterIP endpoint is verified from the Home Assistant
+namespace, and the operator guide is in `docs/11-host-metrics.md`. The remaining verification is
+the manual Home Assistant UI sensor creation and a maintenance-window node reboot. Home Assistant
+continues to run from the published image, private state lives on a 10 GiB PVC, and the UI is served
+with HTTPS at `https://home-assistant.<tailnet>.ts.net/`. Zigbee is connected through `/dev/zbt2`.
+Backup pulls, manifest validation, and restore hardening are in place; the destructive full-rebuild
+drills remain a maintenance-window task.
 
 The baseline specification is
 [`specs/001-home-sweet-lab-gitops/spec.md`](specs/001-home-sweet-lab-gitops/spec.md).

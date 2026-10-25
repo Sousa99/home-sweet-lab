@@ -320,12 +320,13 @@ tracked `apps` path and reverts manual drift at the next interval. Use Git for c
 
 ## Verification record
 
-Observed on the `dietpi` cluster on 2026-10-25 using a temporary pre-merge apply of the manifests
-and the documented endpoint. The temporary apply was removed after verification; it is not the
-source of truth. Real IP addresses are omitted.
+Observed on the `dietpi` cluster on 2026-10-25. A temporary pre-merge apply was used first, then
+removed; Flux subsequently reconciled the committed manifests at `main@388a432`. Real IP addresses
+are omitted.
 
 | Check | Observed |
 | ----- | -------- |
+| Flux reconciliation | The `apps` Kustomization is Ready at `main@388a432`; the exporter Deployment is Ready on `dietpi`. |
 | Pod readiness | `host-metrics` became Ready on `dietpi`; `/readyz` returned `200` from the `home-assistant` namespace. |
 | Service DNS | `http://host-metrics.monitoring.svc.cluster.local:9100/metrics` returned HTTP 200 from the Home Assistant pod. |
 | Temperature | hwmon sources were present; the preferred reading was `coretemp` / `Package id 0`. |
@@ -334,11 +335,11 @@ source of truth. Real IP addresses are omitted.
 | Battery | One `BAT0` battery was present with raw status `Full`; `host_metrics_battery_available` was `1`. |
 | Exposure | Service type `ClusterIP`; no Ingress, `hostNetwork`, `hostPID`, `hostPort`, or privileged mode. |
 | Pod restart | Deleting the pod produced a replacement that became Ready; `/readyz` returned `200` again. |
+| Flux drift | Scaling the Deployment to zero was reverted to one replica by Flux reconciliation. |
 | Absent sources | Unit tests cover no temperature, no battery, unreadable battery status, missing memory, and missing root filesystem; the live host had both temperature and battery. |
 
-Still pending: Flux reconciliation from Git (requires a commit and push), the manual Home Assistant
-UI sensor creation, the node-reboot drill, and the Flux-drift drill. The temporary pre-merge apply
-is not the source of truth; Flux must reconcile the committed manifests.
+Still pending: the manual Home Assistant UI sensor creation and the node-reboot drill. Flux
+reconciliation, pod replacement, and Flux drift correction are verified.
 
 ## Security and trade-offs
 

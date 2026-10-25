@@ -82,7 +82,7 @@ work is required.
 - [X] T015 [P] [US1] Create `apps/host-metrics/service.yaml` as a `ClusterIP` Service named `host-metrics` on port `9100` targeting the named `http` container port; do not add an Ingress, LoadBalancer, NodePort, hostPort, or Tailscale exposure.
 - [X] T016 [US1] Harden `apps/host-metrics/deployment.yaml`: `runAsNonRoot`, UID/GID 65534, `allowPrivilegeEscalation: false`, `readOnlyRootFilesystem: true`, `capabilities.drop: ["ALL"]`, `seccompProfile: RuntimeDefault`, `automountServiceAccountToken: false`, no privileged mode, no hostNetwork, no hostPID, and no writable host mounts.
 - [X] T017 [US1] Run `kubectl kustomize apps` and `./scripts/validate.sh`; fix Kustomize, kubeconform, yamllint, secret-scan, or unit-test failures in `apps/host-metrics/` and `scripts/validate.sh`.
-- [ ] T018 [US1] Reconcile Flux and verify the workload using `specs/002-host-metrics-exporter/quickstart.md`: `flux reconcile kustomization apps --with-source`, `kubectl -n monitoring rollout status deployment/host-metrics`, and confirm the pod is Ready on `dietpi` with the generated `host-metrics-script-<hash>` ConfigMap.
+- [X] T018 [US1] Reconcile Flux and verify the workload using `specs/002-host-metrics-exporter/quickstart.md`: `flux reconcile kustomization apps --with-source`, `kubectl -n monitoring rollout status deployment/host-metrics`, and confirm the pod is Ready on `dietpi` with the generated `host-metrics-script-<hash>` ConfigMap.
 - [X] T019 [US1] Verify `/metrics`, `/ha`, and `/readyz` from the `home-assistant` namespace using `specs/002-host-metrics-exporter/quickstart.md`; confirm every available metric family, the battery status keys, and `/readyz` 200. If the host has no battery, confirm `battery_status: null` and `host_metrics_battery_available 0`; if `/proc/1/net` is unreadable, apply the documented `/proc` fallback from `research.md`.
 - [X] T020 [US1] Verify there is no external exposure by inspecting `apps/host-metrics/service.yaml` and `apps/host-metrics/deployment.yaml`: ClusterIP only, no Ingress, no LoadBalancer/NodePort, no hostPort, no hostNetwork, no privileged mode, and no hostPID.
 - [X] T021 [US1] Run the pod replacement check in `specs/002-host-metrics-exporter/quickstart.md`: delete the exporter pod, wait for the replacement to become Ready, and confirm `/metrics` returns HTTP 200 without manual action.
@@ -129,7 +129,7 @@ are unavailable rather than stale or fabricated, and restore normal operation.
 - [X] T030 [US3] Run the pod restart drill from `specs/002-host-metrics-exporter/quickstart.md`; confirm the replacement pod is Ready within 2 minutes and record the observed behavior in `docs/11-host-metrics.md`.
 - [X] T031 [US3] Verify the no-temperature, no-battery, and unreadable battery-status paths through `apps/host-metrics/test_exporter.py` and, when the host has a battery, the live `/ha` response; record the expected unavailable states in `docs/11-host-metrics.md`.
 - [ ] T032 [US3] Run the coordinated node reboot drill from `specs/002-host-metrics-exporter/quickstart.md`; confirm the node, Flux reconciliation, pod readiness on `dietpi`, endpoint reachability, and current IPv4/battery values; record the result in `docs/11-host-metrics.md`.
-- [ ] T033 [US3] Verify Flux reverts a manual change (for example a temporary replica-count change) to `apps/host-metrics/deployment.yaml`; restore the desired state and record the observation in `docs/11-host-metrics.md`.
+- [X] T033 [US3] Verify Flux reverts a manual change (for example a temporary replica-count change) to `apps/host-metrics/deployment.yaml`; restore the desired state and record the observation in `docs/11-host-metrics.md`.
 - [X] T034 [US3] Verify the hostPath failure behavior with a fixture-based local run or a controlled temporary check; confirm an unreadable memory/root source makes `/readyz` 503 while an unreadable hwmon or battery status only removes that reading; record the result in `docs/11-host-metrics.md`.
 
 **Checkpoint**: Every documented failure mode has an observed or test-backed expected behavior and a
@@ -150,9 +150,7 @@ recovery path.
 
 ## Pending / Blocked
 
-- T018 requires a commit and push so Flux reconciles the committed `apps/host-metrics` resources. The manifests were verified with a temporary pre-merge apply, then removed to avoid unmanaged drift.
 - T032 requires a coordinated maintenance-window node reboot and post-reboot Flux verification.
-- T033 requires Flux reconciliation of the committed workload before a drift drill can be meaningful.
 - T036 requires the operator to perform the manual Home Assistant UI steps and a node-reboot window; P1 and the non-UI P3 checks are complete.
 
 ## Dependencies & Execution Order
