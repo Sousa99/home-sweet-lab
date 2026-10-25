@@ -36,7 +36,7 @@ spec:
           effect: NoSchedule
       containers:
         - name: exporter
-          image: ghcr.io/sousa99/home-sweet-lab-host-metrics:main-20261025230000-0000000  # {"$imagepolicy": "flux-system:host-metrics"}
+          image: ghcr.io/sousa99/home-sweet-lab-host-metrics:main-20261025232617-290e420  # {"$imagepolicy": "flux-system:host-metrics"}
           imagePullPolicy: IfNotPresent
           env:
             - name: PYTHONUNBUFFERED
