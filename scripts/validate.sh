@@ -34,6 +34,13 @@ else
     echo "yamllint not found; skipping YAML lint" >&2
 fi
 
+if command -v python3 >/dev/null 2>&1; then
+    echo "Running host-metrics exporter tests"
+    python3 -m unittest discover -s "$repo_root/apps/host-metrics" -p 'test_*.py'
+else
+    echo "python3 not found; skipping host-metrics exporter tests" >&2
+fi
+
 if command -v gitleaks >/dev/null 2>&1; then
     echo "Scanning for secrets"
     gitleaks detect --source "$repo_root" --no-banner --redact

@@ -27,6 +27,12 @@ backups/
 *.tgz
 *.zip
 
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
 # Temporary validation output
 tmp/
 .artifacts/

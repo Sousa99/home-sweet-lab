@@ -1,0 +1,132 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: host-metrics
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: host-metrics
+    app.kubernetes.io/part-of: home-sweet-lab
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: host-metrics
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: host-metrics
+        app.kubernetes.io/part-of: home-sweet-lab
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 10
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      nodeSelector:
+        kubernetes.io/hostname: dietpi
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: exporter
+          image: python:3.12-alpine@sha256:b658b05ce9c4eb97ec6fc19424818a1f31993659c2b505a532f470e83807815d
+          imagePullPolicy: IfNotPresent
+          command:
+            - python3
+            - /app/exporter.py
+          env:
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: PYTHONDONTWRITEBYTECODE
+              value: "1"
+            - name: HOST_PROC
+              value: /host/proc
+            - name: HOST_NET
+              value: /host/proc/1/net
+            - name: HOST_SYS
+              value: /host/sys
+            - name: HOST_ROOT
+              value: /host/root
+            - name: LISTEN_PORT
+              value: "9100"
+          ports:
+            - name: http
+              containerPort: 9100
+              protocol: TCP
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            privileged: false
+            capabilities:
+              drop:
+                - ALL
+          startupProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 24
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 3
+            failureThreshold: 5
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 96Mi
+          volumeMounts:
+            - name: proc-meminfo
+              mountPath: /host/proc/meminfo
+              readOnly: true
+            - name: proc-net
+              mountPath: /host/proc/1/net
+              readOnly: true
+            - name: sys
+              mountPath: /host/sys
+              readOnly: true
+            - name: host-root
+              mountPath: /host/root
+              readOnly: true
+            - name: script
+              mountPath: /app
+              readOnly: true
+      volumes:
+        - name: proc-meminfo
+          hostPath:
+            path: /proc/meminfo
+            type: File
+        - name: proc-net
+          hostPath:
+            path: /proc/1/net
+            type: Directory
+        - name: sys
+          hostPath:
+            path: /sys
+            type: Directory
+        - name: host-root
+          hostPath:
+            path: /
+            type: Directory
+        - name: script
+          configMap:
+            name: host-metrics-script
+            defaultMode: 0444

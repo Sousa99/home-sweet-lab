@@ -91,9 +91,40 @@ These are deliberate v1 boundaries. They are documented so they are not mistaken
 - Flux image automation needs a read-write deploy key; a read-only bootstrap key silently prevents
   image tag write-back.
 
+## Host metrics exporter
+
+- The exporter is visibility only. It is not an availability monitor, an alerting system, or a
+  long-term metrics store.
+- Home Assistant's built-in Scrape integration has no scan-interval field in the UI, so the sensors
+  poll every 10 minutes. Faster polling requires Home Assistant YAML or HACS, which are out of
+  scope.
+- The host may have no battery or no usable temperature sensor. In that case the corresponding
+  metric family is absent, the Home Assistant sensor is unavailable, and the other sensors continue
+  to work. The exporter does not fabricate a value.
+- Battery status is the raw Linux `power_supply` state (`Charging`, `Discharging`, `Full`, `Not
+  charging`, or `Unknown`). Battery percentage, health, runtime, and NUT/UPS integration are out of
+  scope.
+- The exporter reads `/proc/meminfo`, `/proc/1/net`, `/sys`, and `/` through read-only hostPath
+  mounts. The host `/` mount is the broadest exposure; it exists only for `statvfs("/")`. The
+  container runs as UID/GID 65534 with all capabilities dropped and no privileged mode.
+- `/proc/1/net` is a narrow read of the host network namespace. The exporter does not use
+  hostNetwork or the host PID namespace.
+- The runtime image is the official `python:3.12-alpine` image pinned by digest. Docker Hub is the
+  only new image dependency; if it is unavailable and the image is not cached, the exporter cannot
+  start. Home Assistant and other workloads are unaffected.
+- The Service is ClusterIP only. The cluster has no reliable NetworkPolicy layer, so any pod can
+  reach the exporter; it is not reachable from outside the cluster.
+- If the exporter is down, Home Assistant sensors become unavailable at the next poll. They recover
+  automatically after the exporter is Ready again; no sensor reconfiguration is needed.
+- If the exporter is unavailable, there is no alert. Check `kubectl -n monitoring` and the
+  Home Assistant UI state manually. See [`11-host-metrics.md`](11-host-metrics.md).
+- The exporter does not add IPv6 reporting, network throughput, disk I/O, per-container metrics, or
+  external access.
+
 ## Operations
 
-- No monitoring, alerting, log aggregation, or dashboarding beyond Lens and `kubectl`.
+- No Prometheus, Grafana, alerting, log aggregation, or dashboarding beyond Lens, `kubectl`, and the
+  internal host-metrics exporter.
 - No automated certificate rotation, datastore backup, or configuration drift detection.
 - No SSO for Home Assistant; household accounts are managed in the Home Assistant UI.
 - Recovery drills are manual and must be scheduled.

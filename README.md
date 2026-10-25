@@ -20,14 +20,18 @@ Mac (development) ──git push──▶ GitHub: home-sweet-lab
                     │     ├── Deployment (image from the HA repository)
                     │     ├── PVC (state, history, backups)
                     │     └── Tailscale Ingress ──▶ home-assistant.<tailnet>.ts.net
+                    ├── monitoring namespace
+                    │     └── host-metrics exporter ──▶ ClusterIP :9100
                     ├── tailscale namespace (operator + ingress proxy)
                     └── Traefik ──▶ future apps at /
 ```
 
 ## Status
 
-Phase 5: Flux reconciles the Home Assistant deployment from `main`. Home Assistant runs from the
-published image, private state lives on a 10 GiB PVC, and the UI is served with HTTPS at
+Phase 6: Host-metrics exporter manifests, unit tests, and the operator guide are implemented.
+Flux reconciliation of the exporter and the manual Home Assistant sensor steps remain the final
+verification steps. Home Assistant continues to run from the published image, private state lives
+on a 10 GiB PVC, and the UI is served with HTTPS at
 `https://home-assistant.<tailnet>.ts.net/`. Zigbee is connected through `/dev/zbt2`. Backup pulls,
 manifest validation, and restore hardening are in place; the destructive full-rebuild drills remain
 a maintenance-window task.
@@ -49,6 +53,7 @@ The baseline specification is
 | [08-backups-and-recovery](docs/08-backups-and-recovery.md) | Backup pull, restore, rebuild |
 | [09-limitations](docs/09-limitations.md) | Access, storage, security, future work |
 | [10-ui-to-git](docs/10-ui-to-git.md) | Pull UI YAML changes into the checkout for review |
+| [11-host-metrics](docs/11-host-metrics.md) | Host-metrics exporter, metric contract, HA UI, recovery |
 
 Host-specific notes: [`host/dietpi/`](host/dietpi/).
 
@@ -61,7 +66,8 @@ Host-specific notes: [`host/dietpi/`](host/dietpi/).
 | Ingress | Tailscale Kubernetes Operator for Home Assistant; Traefik for future apps | This repository |
 | GitOps | Flux controllers in `flux-system` | This repository |
 | Network | Tailscale on the host and the Kubernetes Operator, MagicDNS, HTTPS | This repository (documented) |
-| Deployment | Home Assistant manifests, image tag | This repository |
+| Monitoring | Internal host-metrics exporter (ClusterIP only); no Prometheus/Grafana | This repository |
+| Deployment | Home Assistant manifests, image tag; host-metrics manifests | This repository |
 | Configuration | Home Assistant YAML, automations, dashboards | `home-sweet-home-home-assistant` |
 | Private state | `.storage`, DBs, `secrets.yaml`, backups | Manual, never committed |
 
@@ -95,7 +101,7 @@ See the secrets and recovery documents listed in [`docs/`](docs/README.md).
 ```text
 clusters/dietpi/          Flux entry point and generated flux-system manifests
 infrastructure/           Cluster-wide resources managed by Flux
-apps/                     Workloads (Home Assistant first)
+apps/                     Workloads (Home Assistant, host-metrics)
 scripts/                  Operational helpers (config pull, state bundles, backups, validation)
 host/                     Host-specific notes and udev rules
 docs/                     Setup, access, Flux, Home Assistant, recovery
