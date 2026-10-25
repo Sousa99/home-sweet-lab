@@ -48,6 +48,7 @@ The baseline specification is
 | [07-secrets-and-unsynced-state](docs/07-secrets-and-unsynced-state.md) | Manual secrets and state bundles |
 | [08-backups-and-recovery](docs/08-backups-and-recovery.md) | Backup pull, restore, rebuild |
 | [09-limitations](docs/09-limitations.md) | Access, storage, security, future work |
+| [10-ui-to-git](docs/10-ui-to-git.md) | Pull UI YAML changes into the checkout for review |
 
 Host-specific notes: [`host/dietpi/`](host/dietpi/).
 
@@ -82,6 +83,11 @@ Untracked state is moved deliberately, not by Git:
 - **Never committed:** state bundles, backups, `secrets.yaml`, databases, and Tailscale or
   kubeconfig material.
 
+To promote UI-created YAML (automations, scripts, scenes, YAML-mode dashboards) back into Git, run
+`scripts/pull-config.sh` (dry-run by default), review the diff, then commit. Storage-mode dashboards
+are not pulled; they remain on the PVC and in backups. See
+[10-ui-to-git](docs/10-ui-to-git.md).
+
 See the secrets and recovery documents listed in [`docs/`](docs/README.md).
 
 ## Repository map
@@ -90,7 +96,7 @@ See the secrets and recovery documents listed in [`docs/`](docs/README.md).
 clusters/dietpi/          Flux entry point and generated flux-system manifests
 infrastructure/           Cluster-wide resources managed by Flux
 apps/                     Workloads (Home Assistant first)
-scripts/                  Operational helpers (state bundles, backups, validation)
+scripts/                  Operational helpers (config pull, state bundles, backups, validation)
 host/                     Host-specific notes and udev rules
 docs/                     Setup, access, Flux, Home Assistant, recovery
 specs/                    Spec-driven deliverables

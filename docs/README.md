@@ -13,7 +13,8 @@ executed state. The destructive full-rebuild drills remain a maintenance-window 
 | `06-home-assistant.md` | Image, PVC, init containers, Tailscale Ingress, ZBT-2, migration | Deployed 2026-10-25; verified |
 | `07-secrets-and-unsynced-state.md` | Manual secrets, state bundle creation/upload/restore | Scripts implemented; migration exercised |
 | `08-backups-and-recovery.md` | Backup pull, restore drills, full rebuild | Pull/restore drills executed 2026-10-25; full rebuild pending |
-| `09-limitations.md` | TLS, single node, Tailscale dependency, storage, discovery | Verified |
+| `09-limitations.md` | Access, single node, Tailscale dependency, storage, discovery | Verified |
+| `10-ui-to-git.md` | Reverse-sync UI YAML changes for review and commit | Script tested 2026-10-25 |
 
 Host-specific notes and the ZBT-2 udev rule live in [`../host/dietpi/`](../host/dietpi/).
 

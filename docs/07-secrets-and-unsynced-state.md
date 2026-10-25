@@ -195,6 +195,10 @@ edit disappears at the next pod restart. Make the change in the configuration re
 Untracked files on the PVC are not overwritten by the seed and are safe to edit manually, but they
 are also not backed up unless they are part of a bundle or a Home Assistant backup.
 
+To pull UI-created YAML changes back into the checkout for review and commit, use
+[`scripts/pull-config.sh`](../scripts/pull-config.sh); see
+[10-ui-to-git.md](10-ui-to-git.md).
+
 ## Rotation checklist
 
 1. Rotate the credential at the source.
