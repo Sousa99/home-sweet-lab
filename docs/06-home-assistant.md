@@ -394,13 +394,14 @@ spec:
     path: ./apps/home-assistant
 ```
 
-The Deployment image line carries the setter marker:
+Every image line carries the setter marker: `seed-config`, `restore-state`, `configure-http`, and the
+main container. That keeps the init scripts and the running Home Assistant image in lockstep.
 
 ```yaml
 image: ghcr.io/sousa99/home-sweet-home-home-assistant:main-20261024120000-abcdef0 # {"$imagepolicy": "flux-system:home-assistant"}
 ```
 
-Bootstrap with `--read-write-key`; otherwise the push fails.
+Bootstrap with `--read-write-key`; otherwise the push fails. The deploy key is write-enabled.
 
 ## Verification
 
