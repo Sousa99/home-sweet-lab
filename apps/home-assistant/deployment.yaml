@@ -32,7 +32,6 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /config
-
         - name: restore-state
           image: ghcr.io/sousa99/home-sweet-home-home-assistant:main-20261025082658-0b3b51b
           imagePullPolicy: IfNotPresent
@@ -48,10 +47,9 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /config
-
       containers:
         - name: home-assistant
-          image: ghcr.io/sousa99/home-sweet-home-home-assistant:main-20261025082658-0b3b51b # {"$imagepolicy": "flux-system:home-assistant"}
+          image: ghcr.io/sousa99/home-sweet-home-home-assistant:main-20261025084504-004e937 # {"$imagepolicy": "flux-system:home-assistant"}
           imagePullPolicy: IfNotPresent
           env:
             - name: TZ
@@ -95,7 +93,6 @@ spec:
               mountPath: /config
             - name: zbt2
               mountPath: /dev/zbt2
-
       volumes:
         - name: config
           persistentVolumeClaim:
