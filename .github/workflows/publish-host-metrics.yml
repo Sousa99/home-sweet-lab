@@ -1,0 +1,58 @@
+name: Publish host-metrics image
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - apps/host-metrics/Dockerfile
+      - apps/host-metrics/requirements.txt
+      - apps/host-metrics/exporter.py
+      - apps/host-metrics/mqtt_discovery.py
+      - apps/host-metrics/mqtt_publisher.py
+      - .github/workflows/publish-host-metrics.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test dependencies
+        run: pip install -r apps/host-metrics/requirements.txt
+
+      - name: Run exporter tests
+        run: python -m unittest discover -s apps/host-metrics -p 'test_*.py'
+
+      - name: Set image tag
+        id: image
+        run: echo "tag=main-$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/host-metrics
+          push: true
+          tags: ghcr.io/sousa99/home-sweet-lab-host-metrics:${{ steps.image.outputs.tag }}
+
+      - name: Record published image
+        run: |
+          echo "Published ghcr.io/sousa99/home-sweet-lab-host-metrics:${{ steps.image.outputs.tag }}" >> "$GITHUB_STEP_SUMMARY"

@@ -91,16 +91,16 @@ These are deliberate v1 boundaries. They are documented so they are not mistaken
 - Flux image automation needs a read-write deploy key; a read-only bootstrap key silently prevents
   image tag write-back.
 
-## Host metrics exporter
+## Host metrics exporter and MQTT device
 
 - The exporter is visibility only. It is not an availability monitor, an alerting system, or a
   long-term metrics store.
-- Home Assistant's built-in Scrape integration has no scan-interval field in the UI, so the sensors
-  poll every 10 minutes. Faster polling requires Home Assistant YAML or HACS, which are out of
-  scope.
+- The primary Home Assistant path is MQTT discovery, producing one `home-sweet-lab-server` device
+  with six entities. The legacy Scrape path polls every 10 minutes; the MQTT path publishes every
+  30 seconds. See [`12-host-metrics-mqtt.md`](12-host-metrics-mqtt.md).
 - The host may have no battery or no usable temperature sensor. In that case the corresponding
-  metric family is absent, the Home Assistant sensor is unavailable, and the other sensors continue
-  to work. The exporter does not fabricate a value.
+  per-source availability topic goes offline, the entity is unavailable, and the other entities
+  continue to work. The exporter does not fabricate a value.
 - Battery status is the raw Linux `power_supply` state (`Charging`, `Discharging`, `Full`, `Not
   charging`, or `Unknown`). Battery percentage, health, runtime, and NUT/UPS integration are out of
   scope.
@@ -109,22 +109,30 @@ These are deliberate v1 boundaries. They are documented so they are not mistaken
   container runs as UID/GID 65534 with all capabilities dropped and no privileged mode.
 - `/proc/1/net` is a narrow read of the host network namespace. The exporter does not use
   hostNetwork or the host PID namespace.
-- The runtime image is the official `python:3.12-alpine` image pinned by digest. Docker Hub is the
-  only new image dependency; if it is unavailable and the image is not cached, the exporter cannot
-  start. Home Assistant and other workloads are unaffected.
-- The Service is ClusterIP only. The cluster has no reliable NetworkPolicy layer, so any pod can
-  reach the exporter; it is not reachable from outside the cluster.
-- If the exporter is down, Home Assistant sensors become unavailable at the next poll. They recover
-  automatically after the exporter is Ready again; no sensor reconfiguration is needed.
-- If the exporter is unavailable, there is no alert. Check `kubectl -n monitoring` and the
-  Home Assistant UI state manually. See [`11-host-metrics.md`](11-host-metrics.md).
+- The exporter image is built in this repository and published to GHCR. The broker uses the pinned
+  `eclipse-mosquitto:2` image. Docker Hub and GHCR are image dependencies; if an image is
+  unavailable and not cached, the affected pod cannot start. Home Assistant and other workloads are
+  unaffected.
+- Mosquitto runs in `monitoring` with a ClusterIP Service on 1883. It uses two MQTT users and
+  topic ACLs. The credentials are a manual Secret, never committed.
+- MQTT is plain TCP inside the cluster. There is no MQTT TLS in v1. Auth and ACLs are the boundary;
+  the broker is not externally exposed.
+- The broker is ephemeral: no PVC, and retained discovery/state is lost on broker restart. The
+  exporter republishes on reconnect and on the Home Assistant birth message.
+- If the exporter is down, the broker publishes the Last Will and all MQTT entities become
+  unavailable. They recover automatically after the exporter is Ready again.
+- If the broker is down, MQTT entities become unavailable. The exporter reconnects when the broker
+  returns. There is no alert; check `kubectl -n monitoring` and the Home Assistant UI manually.
+- The cluster has no reliable NetworkPolicy layer, so any pod can reach the exporter and broker;
+  neither is reachable from outside the cluster.
 - The exporter does not add IPv6 reporting, network throughput, disk I/O, per-container metrics, or
-  external access.
+  external access. The Kubernetes node, hostname, Linux user, and OS remain `dietpi`; only the Home
+  Assistant device identity is `home-sweet-lab-server`.
 
 ## Operations
 
-- No Prometheus, Grafana, alerting, log aggregation, or dashboarding beyond Lens, `kubectl`, and the
-  internal host-metrics exporter.
+- No Prometheus, Grafana, alerting, log aggregation, or dashboarding beyond Lens, `kubectl`, the
+  internal host-metrics exporter, and the MQTT device.
 - No automated certificate rotation, datastore backup, or configuration drift detection.
 - No SSO for Home Assistant; household accounts are managed in the Home Assistant UI.
 - Recovery drills are manual and must be scheduled.

@@ -14,6 +14,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
+from mqtt_publisher import MqttPublisher, MqttSettings
+
 HOST_PROC = Path(os.environ.get("HOST_PROC", "/host/proc"))
 HOST_NET = Path(os.environ.get("HOST_NET", "/host/proc/1/net"))
 HOST_SYS = Path(os.environ.get("HOST_SYS", "/host/sys"))
@@ -617,8 +619,28 @@ class MetricsHandler(BaseHTTPRequestHandler):
             self._send(HTTPStatus.INTERNAL_SERVER_ERROR, "collection failed\n", "text/plain; charset=utf-8")
 
 
+def _env_int(name: str, default: int) -> int:
+    try:
+        return int(os.environ.get(name, str(default)))
+    except ValueError:
+        return default
+
+
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+    mqtt_host = os.environ.get("MQTT_HOST", "").strip()
+    publisher: MqttPublisher | None = None
+    if mqtt_host:
+        settings = MqttSettings(
+            host=mqtt_host,
+            port=_env_int("MQTT_PORT", 1883),
+            username=os.environ.get("MQTT_USERNAME") or None,
+            password=os.environ.get("MQTT_PASSWORD") or None,
+            client_id=os.environ.get("MQTT_CLIENT_ID", "home-sweet-lab-server"),
+            publish_interval=max(5, _env_int("MQTT_PUBLISH_INTERVAL", 30)),
+        )
+        publisher = MqttPublisher(settings, collect_snapshot, render_ha, readiness)
+        publisher.start()
     server = ThreadingHTTPServer((LISTEN_ADDRESS, LISTEN_PORT), MetricsHandler)
     server.daemon_threads = True
     LOGGER.info("listening on %s:%s", LISTEN_ADDRESS, LISTEN_PORT)
@@ -627,6 +649,8 @@ def main() -> None:
     except KeyboardInterrupt:
         pass
     finally:
+        if publisher is not None:
+            publisher.stop()
         server.server_close()
 
 

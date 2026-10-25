@@ -1,9 +1,14 @@
 # 11 — Host metrics exporter and Home Assistant sensors
 
+> **Legacy Home Assistant path.** The primary Home Assistant integration is now MQTT discovery,
+> which creates one `home-sweet-lab-server` device. See [`12-host-metrics-mqtt.md`](12-host-metrics-mqtt.md).
+> This document remains the HTTP exporter and legacy Scrape reference. The HTTP endpoints still work.
+
 This document owns the operator contract for the DietPi host-metrics exporter: how it is exposed,
-the exact metric names and units, the manual Home Assistant UI steps, verification, and recovery.
-The exporter manifests are in [`../apps/host-metrics/`](../apps/host-metrics/). The design contract is
-in [`../specs/002-host-metrics-exporter/contracts/exporter-api.md`](../specs/002-host-metrics-exporter/contracts/exporter-api.md).
+the exact metric names and units, the legacy Home Assistant Scrape UI steps, verification, and
+recovery. The exporter manifests are in [`../apps/host-metrics/`](../apps/host-metrics/). The design
+contract is in
+[`../specs/002-host-metrics-exporter/contracts/exporter-api.md`](../specs/002-host-metrics-exporter/contracts/exporter-api.md).
 
 ## What it provides
 
@@ -136,7 +141,10 @@ battery_path
 battery_statuses[] (device, status, path, preferred)
 ```
 
-## Home Assistant UI steps
+## Legacy Home Assistant Scrape UI steps
+
+Use MQTT instead unless you are intentionally validating the legacy path. See
+[`12-host-metrics-mqtt.md`](12-host-metrics-mqtt.md).
 
 Do this manually in the Home Assistant UI. Do not add YAML, HACS, automations, or a Home Assistant
 configuration-repository change.

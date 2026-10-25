@@ -21,21 +21,23 @@ Mac (development) ──git push──▶ GitHub: home-sweet-lab
                     │     ├── PVC (state, history, backups)
                     │     └── Tailscale Ingress ──▶ home-assistant.<tailnet>.ts.net
                     ├── monitoring namespace
-                    │     └── host-metrics exporter ──▶ ClusterIP :9100
+                    │     ├── host-metrics exporter ──▶ ClusterIP :9100
+                    │     └── mosquitto broker ──▶ ClusterIP :1883 ──▶ HA MQTT
                     ├── tailscale namespace (operator + ingress proxy)
                     └── Traefik ──▶ future apps at /
 ```
 
 ## Status
 
-Phase 6: Flux reconciles the host-metrics exporter from `main` into the `monitoring` namespace.
-The exporter is Ready on `dietpi`, its ClusterIP endpoint is verified from the Home Assistant
-namespace, and the operator guide is in `docs/11-host-metrics.md`. The remaining verification is
-the manual Home Assistant UI sensor creation and a maintenance-window node reboot. Home Assistant
-continues to run from the published image, private state lives on a 10 GiB PVC, and the UI is served
-with HTTPS at `https://home-assistant.<tailnet>.ts.net/`. Zigbee is connected through `/dev/zbt2`.
-Backup pulls, manifest validation, and restore hardening are in place; the destructive full-rebuild
-drills remain a maintenance-window task.
+Phase 7: Flux reconciles the host-metrics exporter and the MQTT device-grouping path from `main` into
+the `monitoring` namespace. The exporter is Ready on `dietpi`, its ClusterIP endpoint is verified,
+and the MQTT broker and one-device discovery are implemented. The remaining verification is the
+first GHCR image publication, the Home Assistant MQTT integration, removal of the legacy Scrape
+sensors, and a maintenance-window node reboot. Home Assistant continues to run from the published
+image, private state lives on a 10 GiB PVC, and the UI is served with HTTPS at
+`https://home-assistant.<tailnet>.ts.net/`. Zigbee is connected through `/dev/zbt2`. Backup pulls,
+manifest validation, and restore hardening are in place; the destructive full-rebuild drills remain
+a maintenance-window task.
 
 The baseline specification is
 [`specs/001-home-sweet-lab-gitops/spec.md`](specs/001-home-sweet-lab-gitops/spec.md).
@@ -54,7 +56,8 @@ The baseline specification is
 | [08-backups-and-recovery](docs/08-backups-and-recovery.md) | Backup pull, restore, rebuild |
 | [09-limitations](docs/09-limitations.md) | Access, storage, security, future work |
 | [10-ui-to-git](docs/10-ui-to-git.md) | Pull UI YAML changes into the checkout for review |
-| [11-host-metrics](docs/11-host-metrics.md) | Host-metrics exporter, metric contract, HA UI, recovery |
+| [11-host-metrics](docs/11-host-metrics.md) | HTTP exporter, metric contract, legacy Scrape UI, recovery |
+| [12-host-metrics-mqtt](docs/12-host-metrics-mqtt.md) | MQTT broker, one-device discovery, HA MQTT UI, migration |
 
 Host-specific notes: [`host/dietpi/`](host/dietpi/).
 
@@ -67,7 +70,7 @@ Host-specific notes: [`host/dietpi/`](host/dietpi/).
 | Ingress | Tailscale Kubernetes Operator for Home Assistant; Traefik for future apps | This repository |
 | GitOps | Flux controllers in `flux-system` | This repository |
 | Network | Tailscale on the host and the Kubernetes Operator, MagicDNS, HTTPS | This repository (documented) |
-| Monitoring | Internal host-metrics exporter (ClusterIP only); no Prometheus/Grafana | This repository |
+| Monitoring | Internal host-metrics exporter and Mosquitto MQTT broker (ClusterIP only); no Prometheus/Grafana | This repository |
 | Deployment | Home Assistant manifests, image tag; host-metrics manifests | This repository |
 | Configuration | Home Assistant YAML, automations, dashboards | `home-sweet-home-home-assistant` |
 | Private state | `.storage`, DBs, `secrets.yaml`, backups | Manual, never committed |

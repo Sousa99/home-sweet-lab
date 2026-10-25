@@ -1,0 +1,133 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mosquitto
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: mosquitto
+    app.kubernetes.io/part-of: home-sweet-lab
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: mosquitto
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: mosquitto
+        app.kubernetes.io/part-of: home-sweet-lab
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 10
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1883
+        runAsGroup: 1883
+        fsGroup: 1883
+        seccompProfile:
+          type: RuntimeDefault
+      nodeSelector:
+        kubernetes.io/hostname: dietpi
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+      initContainers:
+        - name: prepare-config
+          image: eclipse-mosquitto:2@sha256:860aeb5d63ce509508f6dcfb2bc8a1c1dd2bc60555b562b45ce90e52d8dabb0f
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - |
+              cp /config-src/mosquitto.conf /config-src/acl /config-src/passwd /mosquitto/config/
+              chmod 0644 /mosquitto/config/mosquitto.conf
+              chmod 0600 /mosquitto/config/acl
+              chmod 0600 /mosquitto/config/passwd
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            privileged: false
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: config-src
+              mountPath: /config-src
+              readOnly: true
+            - name: config
+              mountPath: /mosquitto/config
+      containers:
+        - name: mosquitto
+          image: eclipse-mosquitto:2@sha256:860aeb5d63ce509508f6dcfb2bc8a1c1dd2bc60555b562b45ce90e52d8dabb0f
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: mqtt
+              containerPort: 1883
+              protocol: TCP
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            privileged: false
+            capabilities:
+              drop:
+                - ALL
+          startupProbe:
+            tcpSocket:
+              port: mqtt
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 24
+          readinessProbe:
+            tcpSocket:
+              port: mqtt
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            tcpSocket:
+              port: mqtt
+            periodSeconds: 30
+            timeoutSeconds: 3
+            failureThreshold: 5
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+          volumeMounts:
+            - name: config
+              mountPath: /mosquitto/config
+              readOnly: true
+            - name: data
+              mountPath: /mosquitto/data
+            - name: log
+              mountPath: /mosquitto/log
+      volumes:
+        - name: config-src
+          projected:
+            defaultMode: 0444
+            sources:
+              - configMap:
+                  name: mosquitto-config
+                  items:
+                    - key: mosquitto.conf
+                      path: mosquitto.conf
+                    - key: acl
+                      path: acl
+              - secret:
+                  name: mosquitto-auth
+                  items:
+                    - key: passwd
+                      path: passwd
+        - name: config
+          emptyDir: {}
+        - name: data
+          emptyDir: {}
+        - name: log
+          emptyDir: {}

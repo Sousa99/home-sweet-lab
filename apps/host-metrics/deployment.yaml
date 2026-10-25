@@ -8,6 +8,8 @@ metadata:
     app.kubernetes.io/part-of: home-sweet-lab
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   revisionHistoryLimit: 3
   selector:
     matchLabels:
@@ -34,11 +36,8 @@ spec:
           effect: NoSchedule
       containers:
         - name: exporter
-          image: python:3.12-alpine@sha256:b658b05ce9c4eb97ec6fc19424818a1f31993659c2b505a532f470e83807815d
+          image: ghcr.io/sousa99/home-sweet-lab-host-metrics:main-20261025230000-0000000  # {"$imagepolicy": "flux-system:host-metrics"}
           imagePullPolicy: IfNotPresent
-          command:
-            - python3
-            - /app/exporter.py
           env:
             - name: PYTHONUNBUFFERED
               value: "1"
@@ -54,6 +53,24 @@ spec:
               value: /host/root
             - name: LISTEN_PORT
               value: "9100"
+            - name: MQTT_HOST
+              value: mosquitto.monitoring.svc.cluster.local
+            - name: MQTT_PORT
+              value: "1883"
+            - name: MQTT_CLIENT_ID
+              value: home-sweet-lab-server
+            - name: MQTT_PUBLISH_INTERVAL
+              value: "30"
+            - name: MQTT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: mosquitto-auth
+                  key: exporter-username
+            - name: MQTT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mosquitto-auth
+                  key: exporter-password
           ports:
             - name: http
               containerPort: 9100
@@ -106,9 +123,6 @@ spec:
             - name: host-root
               mountPath: /host/root
               readOnly: true
-            - name: script
-              mountPath: /app
-              readOnly: true
       volumes:
         - name: proc-meminfo
           hostPath:
@@ -126,7 +140,3 @@ spec:
           hostPath:
             path: /
             type: Directory
-        - name: script
-          configMap:
-            name: host-metrics-script
-            defaultMode: 0444
