@@ -76,6 +76,13 @@ The script:
 Store the Home Assistant password in your password manager. You will enter it in the MQTT
 integration UI. The exporter password stays in the Secret and is injected into the exporter pod.
 
+If you no longer have the printed password, retrieve it without writing it to Git:
+
+```bash
+kubectl -n monitoring get secret mosquitto-auth -o jsonpath='{.data.homeassistant-password}' | \
+  python3 -c 'import base64, sys; print(base64.b64decode(sys.stdin.read()).decode())'
+```
+
 If the Secret already exists, use `--rotate` intentionally:
 
 ```bash
