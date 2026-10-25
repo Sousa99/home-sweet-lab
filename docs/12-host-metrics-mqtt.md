@@ -51,8 +51,9 @@ Traefik, Tailscale, a LoadBalancer, a NodePort, or a host port.
 - Broker deletion/restart produced a reconnect and full discovery/state/availability republish.
 - Publishing `homeassistant/status=online` caused the exporter to republish discovery.
 
-Still pending: the manual Home Assistant MQTT integration, removal of the legacy Scrape integration,
-the Secret-failure drill, and the node-reboot drill.
+Still pending: the manual Home Assistant MQTT integration, the Secret-failure drill, and the
+node-reboot drill. No legacy Scrape integration is currently configured, so no Scrape cleanup is
+needed.
 
 ## 1. Create the MQTT Secret
 
@@ -203,7 +204,8 @@ battery starts charging or discharging.
 
 ## 6. Remove the legacy Scrape integration
 
-Do this only after the MQTT device and all six entities are verified.
+No Scrape integration is currently configured, so skip this section. If one is added later, remove
+it only after the MQTT device and all six entities are verified.
 
 1. Open **Settings > Devices & services**.
 2. Find the **Scrape** integration used for the old DietPi sensors.

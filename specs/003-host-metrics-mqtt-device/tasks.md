@@ -42,12 +42,12 @@
 - [X] T023 Reconcile Flux; verify the broker and exporter are Ready, the Secret exists, and ACLs allow only the documented topics.
 - [X] T024 Verify retained discovery/state with `mosquitto_sub`, including the one-device device block and six entity topics.
 - [ ] T025 Add the Home Assistant MQTT integration via the UI; verify one `home-sweet-lab-server` device with six entities and updates within 60 seconds.
-- [ ] T026 Remove the legacy Scrape integration if present; delete orphaned entities; verify no duplicates.
+- [X] T026 Remove the legacy Scrape integration if present; delete orphaned entities; verify no duplicates. (No Scrape integration is configured.)
 - [ ] T027 Test exporter restart/LWT, broker restart, HA restart, Secret failure, and node reboot; record results in `docs/12-host-metrics-mqtt.md`.
 - [X] T028 Security review: no external MQTT, no plaintext credentials in Git, no privileged mode, no Home Assistant repo changes.
 - [X] T029 Final validation and diff review; commit/push when explicitly requested.
 
 ## Pending / Blocked
 
-- T025/T026 require the operator to perform the Home Assistant MQTT UI steps and remove legacy Scrape.
+- T025 requires the operator to perform the Home Assistant MQTT UI steps.
 - T027 requires the Secret-failure and coordinated node-reboot drills.

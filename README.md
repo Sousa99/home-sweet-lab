@@ -32,7 +32,7 @@ Mac (development) ──git push──▶ GitHub: home-sweet-lab
 Phase 7: Flux reconciles the host-metrics exporter and the MQTT device-grouping path from `main` into
 the `monitoring` namespace. The exporter and Mosquitto broker are Ready on `dietpi`; retained
 discovery, state, and availability are verified. The remaining work is the manual Home Assistant
-MQTT integration, removal of the legacy Scrape sensors, and a maintenance-window node reboot. Home Assistant continues to run from the published
+MQTT integration and a maintenance-window node reboot. Home Assistant continues to run from the published
 image, private state lives on a 10 GiB PVC, and the UI is served with HTTPS at
 `https://home-assistant.<tailnet>.ts.net/`. Zigbee is connected through `/dev/zbt2`. Backup pulls,
 manifest validation, and restore hardening are in place; the destructive full-rebuild drills remain
