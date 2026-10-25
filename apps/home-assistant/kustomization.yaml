@@ -5,6 +5,5 @@ resources:
   - pvc.yaml
   - service.yaml
   - deployment.yaml
-  - ingressroute.yaml
   - tailscale-ingress.yaml
   - image-automation.yaml
