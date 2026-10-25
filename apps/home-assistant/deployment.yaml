@@ -23,7 +23,7 @@ spec:
       terminationGracePeriodSeconds: 30
       initContainers:
         - name: seed-config
-          image: ghcr.io/sousa99/home-sweet-home-home-assistant:main-20261025082658-0b3b51b
+          image: ghcr.io/sousa99/home-sweet-home-home-assistant:main-20261025084504-004e937
           imagePullPolicy: IfNotPresent
           command:
             - sh
@@ -33,7 +33,7 @@ spec:
             - name: config
               mountPath: /config
         - name: restore-state
-          image: ghcr.io/sousa99/home-sweet-home-home-assistant:main-20261025082658-0b3b51b
+          image: ghcr.io/sousa99/home-sweet-home-home-assistant:main-20261025084504-004e937
           imagePullPolicy: IfNotPresent
           command:
             - /usr/local/bin/restore-state.sh
@@ -47,6 +47,19 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /config
+
+        - name: configure-http
+          image: ghcr.io/sousa99/home-sweet-home-home-assistant:main-20261025084504-004e937
+          imagePullPolicy: IfNotPresent
+          command:
+            - /usr/local/bin/fix-http-proxy.py
+          env:
+            - name: HTTP_TRUSTED_PROXIES
+              value: "10.42.0.0/16,10.43.0.0/16"
+          volumeMounts:
+            - name: config
+              mountPath: /config
+
       containers:
         - name: home-assistant
           image: ghcr.io/sousa99/home-sweet-home-home-assistant:main-20261025084504-004e937 # {"$imagepolicy": "flux-system:home-assistant"}
