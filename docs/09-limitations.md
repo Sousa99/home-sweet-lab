@@ -139,9 +139,8 @@ These are deliberate v1 boundaries. They are documented so they are not mistaken
   MCP authentication; local clients use `kubectl port-forward`.
 - One node, one replica per workload, and `local-path` storage. Bus and task SQLite data has no
   replication, snapshot, or automated offsite backup.
-- The dashboard image was not anonymously pullable when the stack was implemented. Until the GHCR
-  package is public or a `ghcr-pull` Secret is referenced, the frontend pod cannot start. The module
-  backend images are public.
+- The dashboard GHCR package was made public on 2026-10-26. If it is made private again, a
+  `ghcr-pull` Secret and an `imagePullSecrets` reference are required or the frontend cannot start.
 - The dashboard's embedded components packages and module backend images version independently. A
   mismatched frontend/backend pair can render or call APIs incorrectly; update one module at a time
   and roll back by Git revert.

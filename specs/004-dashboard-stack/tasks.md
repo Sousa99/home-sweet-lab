@@ -78,12 +78,12 @@ reach their backends. No MCP client is required.
 - [X] T014 [P] [US1] Create `apps/dashboard/tailscale-ingress.yaml` named `dashboard`, class `tailscale`, backend `dashboard:80`, TLS host `dashboard`; do not add a Traefik ingress.
 - [X] T015 [US1] Create `apps/dashboard/kustomization.yaml` with namespace `dashboard`, resources `namespace.yaml`, `pvc.yaml`, the four REST files, `frontend.yaml`, and `tailscale-ingress.yaml`, plus `configMapGenerator` entries for `dashboard-nginx` from `nginx.conf` and `dashboard-config-check` from `validate-config.py`; add `dashboard` to `apps/kustomization.yaml`.
 - [X] T016 [US1] Run `./scripts/validate.sh` from the repository root and fix any render, schema, lint, unit-test, or secret-scan failure caused by the US1 manifests.
-- [ ] T017 [US1] Resolve dashboard image pullability per `specs/004-dashboard-stack/research.md` R6: verify `ghcr.io/sousa99/home-sweet-home-dashboard:0.1.0` pulls anonymously; if it does not, make the package public or create a `ghcr-pull` Secret and add the imagePullSecrets reference to `apps/dashboard/frontend.yaml`; record the chosen path in `docs/13-dashboard.md`.
+- [X] T017 [US1] Resolve dashboard image pullability per `specs/004-dashboard-stack/research.md` R6: verify `ghcr.io/sousa99/home-sweet-home-dashboard:0.1.0` pulls anonymously; if it does not, make the package public or create a `ghcr-pull` Secret and add the imagePullSecrets reference to `apps/dashboard/frontend.yaml`; record the chosen path in `docs/13-dashboard.md`.
 - [X] T018 [US1] Create the real `dashboard-config` Secret from an external, validated JSON file using `scripts/create-dashboard-config-secret.sh`; if the frontend pod was waiting, delete it and confirm the init container accepts the file.
-- [ ] T019 [US1] Reconcile Flux and verify US1 per `specs/004-dashboard-stack/quickstart.md` sections 3–4: the five US1 Deployments (frontend plus four REST) Ready, both PVCs Bound, Ingress has a Tailscale hostname, the HTTPS page returns `200`, all four `/api/<module>/` health routes work, and no REST Service is externally exposed.
+- [X] T019 [US1] Reconcile Flux and verify US1 per `specs/004-dashboard-stack/quickstart.md` sections 3–4: the five US1 Deployments (frontend plus four REST) Ready, both PVCs Bound, Ingress has a Tailscale hostname, the HTTPS page returns `200`, all four `/api/<module>/` health routes work, and no REST Service is externally exposed.
 - [X] T020 [US1] Run the first bus GTFS ingest through `POST /api/bus/api/refresh`, verify departures for a configured stop, restart the bus REST pod, and confirm the data survives; record the result in `docs/13-dashboard.md`.
-- [ ] T021 [US1] Stop one REST backend, reload the dashboard, and verify only the affected block/status indicator degrades; restore the pod, confirm recovery, and record the result in `docs/13-dashboard.md`.
-- [ ] T022 [US1] Test runtime configuration: update the Secret with a valid change via `scripts/create-dashboard-config-secret.sh`, delete the frontend pod, confirm the new value is served; then test an invalid file and confirm the init container fails visibly without serving built-in defaults; record both outcomes in `docs/13-dashboard.md`.
+- [X] T021 [US1] Stop one REST backend, reload the dashboard, and verify only the affected block/status indicator degrades; restore the pod, confirm recovery, and record the result in `docs/13-dashboard.md`.
+- [X] T022 [US1] Test runtime configuration: update the Secret with a valid change via `scripts/create-dashboard-config-secret.sh`, delete the frontend pod, confirm the new value is served; then test an invalid file and confirm the init container fails visibly without serving built-in defaults; record both outcomes in `docs/13-dashboard.md`.
 - [X] T023 [US1] Create `docs/13-dashboard.md` with frontend/REST prerequisites, GHCR visibility, Secret creation, access URL, API routes, first-run bus ingest, verification commands, US1 failure behavior, and the current image pins; add the document to `docs/README.md`.
 
 **Checkpoint**: US1 is independently deployable and provides the complete visible dashboard with
@@ -135,7 +135,7 @@ manual manifest edits.
 - [X] T038 [US3] Update `docs/08-backups-and-recovery.md` with the dashboard SQLite backup asset, pull/restore commands, retention, checksum requirement, and the verified drill result.
 - [X] T039 [P] [US3] Update `docs/09-limitations.md` with dashboard-specific limitations: Tailscale-only access, no REST/MCP external exposure, single node and local-path data, image visibility, module version skew, MCP single-session, config restart, and no automated offsite backup.
 - [X] T040 [US3] Add recovery, update, rollback, and version-pin sections to `docs/13-dashboard.md`: pod loss, config failure, image-pull failure, provider outage, Service recreation, node reboot, per-module pin update, and Git revert rollback.
-- [ ] T041 [US3] Run the recovery drills in `specs/004-dashboard-stack/quickstart.md` section 8 for pod deletion, missing/invalid config, image-pull failure, external provider outage, and Service recreation; record results in `docs/13-dashboard.md`.
+- [X] T041 [US3] Run the recovery drills in `specs/004-dashboard-stack/quickstart.md` section 8 for pod deletion, missing/invalid config, image-pull failure, external provider outage, and Service recreation; record results in `docs/13-dashboard.md`.
 - [ ] T042 [US3] Run the node-reboot drill: reboot `dietpi`, wait for k3s and Flux, verify all nine Deployments, both PVCs, the dashboard URL, all four MCP URLs, and bus/task data; record the result in `docs/13-dashboard.md`.
 - [X] T043 [US3] Update `README.md` status, architecture table, access section, repository map, and non-goals to include the dashboard stack and its frontend/REST/MCP split.
 - [X] T044 [P] [US3] Update `docs/README.md` with the `13-dashboard.md` status and index entry, and link the dashboard runbook from the relevant secret/backup/limitations documents.
@@ -160,10 +160,8 @@ manual manifest edits.
 
 Completed locally: T001–T016, T023–T028, T033–T035, T037–T040, T043–T046, T048–T049.
 
-Blocked on manual/cluster prerequisites: T017 (dashboard GHCR package visibility or pull token),
-T019/T021/T022 (frontend access, degradation, and config-change tests), T041–T042 (recovery and
-node-reboot drills), T047 (end-to-end quickstart). T018 and T029–T032 are complete; the config
-Secret is in place and all four MCP endpoints pass.
+Remaining: T042 (node reboot) and T047 (end-to-end quickstart). T017, T019, T021, T022, and T041
+are complete; the package is public, the frontend is live, and the failure drills passed.
 
 The repository artifacts pass `./scripts/validate.sh`, `kubectl apply --dry-run=server`, nginx
 configuration syntax validation, and the Python validator tests. The app was reconciled by Flux;

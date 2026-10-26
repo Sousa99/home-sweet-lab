@@ -111,9 +111,9 @@ part of the Home Assistant state bundle.
 
 ### Dashboard GHCR pull credential (optional)
 
-The dashboard image (`ghcr.io/sousa99/home-sweet-home-dashboard:0.1.0`) was not anonymously pullable
-when the stack was implemented. The supported fix is to make the GHCR package public. If it must stay
-private, create a `read:packages` token and a pull Secret:
+The dashboard image (`ghcr.io/sousa99/home-sweet-home-dashboard:0.1.0`) was made public on
+2026-10-26, so no pull Secret is required. If it must become private later, create a `read:packages`
+token and a pull Secret:
 
 ```bash
 kubectl -n dashboard create secret docker-registry ghcr-pull \

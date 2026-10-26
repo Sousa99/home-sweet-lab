@@ -1,9 +1,9 @@
 # 13 — Dashboard stack
 
-Status: Flux reconciled the eight module workloads (four REST, four MCP) and both PVCs on
-2026-10-26. REST health, four cross-namespace MCP initialize calls, and bus/task data consistency
-pass. The dashboard frontend pod is blocked on the private GHCR image. The backup/restore drill
-passed; the node-reboot drill remains pending.
+Status: Flux reconciled all nine workloads and both PVCs on 2026-10-26. The frontend is live at
+`https://dashboard.<tailnet>.ts.net/`, all four REST proxy routes and all four cross-namespace MCP
+initialize calls pass, bus/task data consistency passes, and the backup/restore and failure drills
+passed. The node-reboot drill remains a maintenance-window task.
 
 ## What runs
 
@@ -57,8 +57,9 @@ or MCP ingress, CORS configuration, or authentication in v1.
 | Config validator | `python:3.12-alpine@sha256:b658b05ce9c4eb97ec6fc19424818a1f31993659c2b505a532f470e83807815d` |
 | MCP host rewrite | `nginx:1.27-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10` |
 
-The module backend images are publicly pullable. The dashboard image was **not** anonymously
-pullable during implementation. Resolve this before expecting the frontend pod to start.
+The module backend images and the dashboard image are publicly pullable. The dashboard package was
+made public on 2026-10-26; no pull Secret is needed. The fallback below remains for a future private
+package.
 
 ### Make the dashboard package public (supported)
 

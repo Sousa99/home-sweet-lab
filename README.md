@@ -36,9 +36,10 @@ Mac (development) ──git push──▶ GitHub: home-sweet-lab
 Phase 8: Flux reconciles Home Assistant, the host-metrics exporter, and the MQTT device-grouping path
 from `main`. Home Assistant, the exporter, and Mosquitto are Ready on `dietpi`; retained discovery,
 state, and availability are verified. The dashboard stack is reconciled into `dashboard`: the
-four REST APIs, four MCP servers, and both SQLite PVCs are live and verified. The frontend pod is
-blocked on the private dashboard GHCR image; the configuration Secret is in place and the
-backup/restore drill passed. The remaining Home Assistant work
+frontend at `https://dashboard.<tailnet>.ts.net/`, four REST APIs, four MCP servers, and both SQLite
+PVCs are live and verified. The configuration Secret is in place, the bus schedule is ingested, and
+the backup/restore and failure drills passed. The node-reboot drill remains a maintenance-window
+task. The remaining Home Assistant work
 is the manual MQTT integration and a maintenance-window node reboot. Home Assistant continues to run
 from the published image, private state lives on a 10 GiB PVC, and the UI is served with HTTPS at
 `https://home-assistant.<tailnet>.ts.net/`. Zigbee is connected through `/dev/zbt2`. Backup pulls,
