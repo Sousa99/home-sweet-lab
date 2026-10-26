@@ -1,7 +1,9 @@
 # 13 — Dashboard stack
 
-Status: manifests, scripts, and local validation implemented on 2026-10-26. Cluster deployment and
-recovery drills are pending the GHCR package visibility decision and the Git/Flux reconciliation.
+Status: Flux reconciled the eight module workloads (four REST, four MCP) and both PVCs on
+2026-10-26. REST health, four cross-namespace MCP initialize calls, and bus/task data consistency
+pass. The dashboard frontend pod is blocked on the private GHCR image. The backup/restore drill
+passed; the node-reboot drill remains pending.
 
 ## What runs
 

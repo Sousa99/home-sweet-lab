@@ -198,7 +198,7 @@ contains the desired state.
 | Missing ZBT-2 | Not executed: would disconnect Zigbee; fail-fast behavior is documented |
 | Restore a backup through the Home Assistant UI | Not executed: requires UI authentication and a maintenance window |
 | Secret scan of both repositories | Passed: `gitleaks` found no leaks |
-| Dashboard backup/restore | Pending: stack not yet reconciled to the cluster |
+| Dashboard backup/restore | Passed 2026-10-26: 274 MB archive, checksum matched, 1.8 GB bus DB restored, REST/MCP recovered |
 | Dashboard node reboot and MCP recovery | Pending: stack not yet reconciled to the cluster |
 
 The full PVC and cluster rebuild drills must be run before treating the recovery time objective as
