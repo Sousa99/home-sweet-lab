@@ -236,11 +236,15 @@ frontend block and MCP call, then record the new combination. Rollback is a Git 
 
 | Workload | CPU request | CPU limit | Memory request | Memory limit |
 | -------- | ----------- | --------- | -------------- | ------------ |
-| Each module container (REST or MCP) | 50m | 500m | 128Mi | 512Mi |
+| `bus-catcher-rest` | 100m | 1 | 256Mi | 2Gi |
+| Other module containers (REST or MCP) | 50m | 500m | 128Mi | 512Mi |
 | Frontend | 25m | 250m | 32Mi | 128Mi |
 
-Totals: approximately 425m CPU and 1.06Gi memory requested; 4.25 CPU and 4.13Gi memory at limits on
-a 15 GiB node. Home Assistant, Flux, Tailscale, and k3s retain headroom.
+`bus-catcher-rest` needs a larger memory limit because the Carris GTFS feed is about 77 MB compressed
+and the one-off ingest exceeded 512Mi during validation, causing an OOMKill. The 2Gi limit leaves
+room for the download and parse on a 15 GiB node. Totals are approximately 475m CPU and 1.19Gi memory
+requested; 4.75 CPU and 5.63Gi memory at limits. Home Assistant, Flux, Tailscale, and k3s retain
+headroom.
 
 ## 7. State Transitions
 

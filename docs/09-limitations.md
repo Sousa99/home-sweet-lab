@@ -158,6 +158,9 @@ These are deliberate v1 boundaries. They are documented so they are not mistaken
   cluster network access is the boundary for MCP, and the cluster has no reliable NetworkPolicy layer.
 - External weather, flight, and GTFS providers are dependencies. Their outages degrade only the
   affected block or first-run ingest; they do not stop the cluster workloads.
+- The bus GTFS ingest is memory-heavy: the feed is about 77 MB compressed and the first attempt
+  OOMKilled at 512 MiB. `bus-catcher-rest` has a 2 GiB limit, an intentional exception to the module
+  container limit.
 
 ## Operations
 

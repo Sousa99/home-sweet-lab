@@ -176,6 +176,10 @@ curl -sS https://dashboard.<tailnet>.ts.net/api/bus/api/stops/<stop-id>/times
 Tasks start empty; an empty deck is valid. Create a task through the module API/SPA if a non-empty
 deck is needed. The bus/task SQLite files live on their PVCs and survive pod replacement.
 
+The Carris feed is about 77 MB compressed. `bus-catcher-rest` has a 2 GiB memory limit because the
+first ingest OOMKilled at 512 MiB; the other module containers stay at 512 MiB. If the ingest still
+fails, check `bus-catcher-rest` logs and events before retrying.
+
 ## REST proxy contract
 
 | Public route | Backend Service | Backend path after prefix strip |
@@ -324,6 +328,9 @@ check the node, PVC, and image-pull events.
 - The procrastinator MCP server is single-session; a restart drops the session, not the data.
 - Configuration changes require a frontend pod restart; the file is read at page load.
 - Backup/restore is a manual maintenance window, not an automated offsite backup.
+- The bus GTFS ingest is memory-heavy: the feed is about 77 MB compressed and the first attempt
+  OOMKilled at 512 MiB. `bus-catcher-rest` is capped at 2 GiB; this is a deliberate exception to the
+  512 MiB module limit.
 - Home Assistant remains the higher-priority workload; dashboard resource limits protect it, but a
   node-level failure affects both.
 

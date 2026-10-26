@@ -183,12 +183,13 @@ using the fly feed for liveness (couples restart behavior to a third party).
 ## R8. Resource sizing
 
 **Decision**: Each REST/MCP container requests `50m` CPU and `128Mi` memory and limits to `500m` CPU
-and `512Mi` memory. The frontend requests `25m`/`32Mi` and limits to `250m`/`128Mi`.
+and `512Mi` memory, except `bus-catcher-rest`, which requests `100m`/`256Mi` and limits to `1` CPU
+and `2Gi` memory. The frontend requests `25m`/`32Mi` and limits to `250m`/`128Mi`.
 
 **Rationale**: Eight Node processes plus nginx on a 15 GiB, 8 vCPU node. Total requests are about
-`425m` and `1.06Gi`; total limits are about `4.25` cores and `4.13Gi`. That leaves substantial
-headroom for Home Assistant, Flux, Tailscale, and k3s. The limits are high enough for Node startup
-and SQLite but low enough that one runaway process cannot starve the node.
+`475m` and `1.19Gi`; total limits are about `4.75` cores and `5.63Gi`. That leaves substantial
+headroom for Home Assistant, Flux, Tailscale, and k3s. The first GTFS ingest OOMKilled
+`bus-catcher-rest` at 512Mi during validation, so that one container gets 2Gi; the rest stay small.
 
 **Alternatives considered**: no limits (unsafe on a single node) and very small limits (risk of
 OOMKill during Node startup). The values are validated during deployment and adjusted only with a
