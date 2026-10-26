@@ -238,3 +238,35 @@ app is included automatically by the `apps` Kustomization. Add cluster smoke tes
 **Rationale**: The only new repo-owned executable logic is the config validator. The manifests are
 covered by the existing render/schema/lint pipeline. The nginx config is validated by a real
 frontend deployment; a local `nginx -t` is optional and not guaranteed on the Mac.
+
+## R12. Fly-over and weather MCP Host-header workaround
+
+**Decision**: Run an nginx sidecar named `host-rewrite` in the `fly-over-tracker-mcp` and
+`weather-psychic-mcp` pods. The MCP process binds `127.0.0.1:3002`; nginx listens on `3001`, proxies
+to `127.0.0.1:3002`, sets `Host: localhost` and `Origin: http://localhost`, disables buffering, and
+keeps long SSE read/send timeouts. The public Service still exposes port `3001`.
+
+**Rationale**:
+
+- The published fly-over and weather MCP servers call `createMcpHonoApp()` from
+  `@modelcontextprotocol/hono`. When no `host` option is passed, that helper defaults to
+  `127.0.0.1` and installs localhost DNS-rebinding validation. A request with a Kubernetes Service
+  DNS Host header is rejected with `Invalid Host: <service>`.
+- The bus-catcher and procrastinator MCP servers accept the Service DNS Host and need no sidecar.
+- Rewriting Host inside the pod keeps the consumer contract simple: the agent uses the same
+  `<module>-mcp.dashboard.svc.cluster.local:3001/mcp` URLs for all four modules. It also strips or
+  normalizes Origin for browser-originated requests.
+- The nginx sidecar is pinned by digest, uses small resource limits, and keeps the MCP process on
+  loopback inside the pod.
+
+**Alternatives considered**:
+
+- **Require every MCP client to send `Host: localhost`**: fragile across clients and not enforceable
+  in the documented agent interface.
+- **Modify the module images**: out of scope and would require new releases.
+- **Use a shared MCP reverse proxy**: adds a fifth Service and a fan-out layer for only two modules.
+- **Expose the MCP port directly**: still fails Host validation and is not a fix.
+
+**Verification**: an MCP `initialize` request from the `home-assistant` namespace must return a
+result for all four Service URLs. The sidecar's liveness/readiness probes use TCP 3001; the MCP
+process probes use TCP 3002.

@@ -41,14 +41,14 @@ spec:
             - --mcp
           env:
             - name: HOST
-              value: 0.0.0.0
+              value: 127.0.0.1
             - name: PORT
               value: "3000"
             - name: MCP_PORT
-              value: "3001"
+              value: "3002"
           ports:
-            - name: mcp
-              containerPort: 3001
+            - name: mcp-internal
+              containerPort: 3002
               protocol: TCP
           securityContext:
             allowPrivilegeEscalation: false
@@ -58,19 +58,19 @@ spec:
                 - ALL
           startupProbe:
             tcpSocket:
-              port: mcp
+              port: mcp-internal
             periodSeconds: 5
             timeoutSeconds: 3
             failureThreshold: 30
           readinessProbe:
             tcpSocket:
-              port: mcp
+              port: mcp-internal
             periodSeconds: 10
             timeoutSeconds: 3
             failureThreshold: 3
           livenessProbe:
             tcpSocket:
-              port: mcp
+              port: mcp-internal
             periodSeconds: 30
             timeoutSeconds: 3
             failureThreshold: 5
@@ -81,6 +81,53 @@ spec:
             limits:
               cpu: 500m
               memory: 512Mi
+        - name: host-rewrite
+          image: nginx:1.27-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: mcp-proxy
+              containerPort: 3001
+              protocol: TCP
+          securityContext:
+            allowPrivilegeEscalation: false
+            privileged: false
+          startupProbe:
+            tcpSocket:
+              port: mcp-proxy
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 30
+          readinessProbe:
+            tcpSocket:
+              port: mcp-proxy
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            tcpSocket:
+              port: mcp-proxy
+            periodSeconds: 30
+            timeoutSeconds: 3
+            failureThreshold: 5
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+          volumeMounts:
+            - name: host-rewrite-config
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: mcp-host-rewrite.conf
+              readOnly: true
+      volumes:
+        - name: host-rewrite-config
+          configMap:
+            name: dashboard-mcp-host-rewrite
+            items:
+              - key: mcp-host-rewrite.conf
+                path: mcp-host-rewrite.conf
 ---
 apiVersion: v1
 kind: Service
@@ -99,5 +146,5 @@ spec:
   ports:
     - name: mcp
       port: 3001
-      targetPort: mcp
+      targetPort: mcp-proxy
       protocol: TCP

@@ -17,13 +17,19 @@ storage are fixed by the published module images.
 | procrastinator-tracker | `ghcr.io/sousa99/procrastinator-tracker-backend:0.2.0` | `sh -c 'node dist/migrate.js && node dist/index.js --http'` | `sh -c 'node dist/migrate.js && node dist/index.js --mcp'` | 3000 | 3001 | `procrastinator-data` |
 | weather-psychic | `ghcr.io/sousa99/weather-psychic-backend:0.1.0` | `node dist/index.js --http` | `node dist/index.js --mcp` | 3000 | 3001 | none |
 
+The fly-over-tracker and weather-psychic MCP processes bind `127.0.0.1:3002` and run beside an nginx
+`host-rewrite` sidecar that listens on `3001`, proxies to `127.0.0.1:3002`, and sets
+`Host: localhost` plus `Origin: http://localhost`. Their published MCP helper rejects the Kubernetes
+Service DNS Host header. The Service still exposes 3001, so consumers use the same URL shape for all
+four modules. Bus-catcher and procrastinator do not need the sidecar.
+
 Common environment:
 
 | Variable | Value | Notes |
 | -------- | ----- | ----- |
 | `HOST` | `0.0.0.0` | Set for fly-over and weather as in Compose; harmless for all. |
 | `PORT` | `3000` | REST listener. |
-| `MCP_PORT` | `3001` | MCP listener. |
+| `MCP_PORT` | `3001` (bus/tasks), `3002` (fly/weather) | MCP listener. Fly/weather bind loopback and use the sidecar. |
 | `DB_PATH` | `/data/bus-catcher.db` | Bus only. |
 | `DATABASE_URL` | `/data/procrastinator.db` | Procrastinator only. |
 | `SNAPSHOT_CACHE_TTL_MS` | `60000` | Fly-over only. |
@@ -128,11 +134,11 @@ included in the operator's backup/credential inventory.
 | `bus-catcher-rest` | 1 | Recreate | `rest` | `bus-catcher-data` |
 | `bus-catcher-mcp` | 1 | Recreate | `mcp` | `bus-catcher-data` |
 | `fly-over-tracker-rest` | 1 | Recreate | `rest` | none |
-| `fly-over-tracker-mcp` | 1 | Recreate | `mcp` | none |
+| `fly-over-tracker-mcp` | 1 | Recreate | `mcp` + `host-rewrite` | none |
 | `procrastinator-tracker-rest` | 1 | Recreate | `rest` | `procrastinator-data` |
 | `procrastinator-tracker-mcp` | 1 | Recreate | `mcp` | `procrastinator-data` |
 | `weather-psychic-rest` | 1 | Recreate | `rest` | none |
-| `weather-psychic-mcp` | 1 | Recreate | `mcp` | none |
+| `weather-psychic-mcp` | 1 | Recreate | `mcp` + `host-rewrite` | none |
 
 All module Deployments use `Recreate` to avoid overlapping writers during a rollout on the shared
 SQLite volume. The frontend uses RollingUpdate because it holds no state.
@@ -221,6 +227,7 @@ PVCs, then scaling back and reconciling. A restore drill is part of acceptance.
 | Procrastinator backend | `ghcr.io/sousa99/procrastinator-tracker-backend:0.2.0` | Components package `^0.2.0`. |
 | Weather backend | `ghcr.io/sousa99/weather-psychic-backend:0.1.0` | Components package `^0.1.0`. |
 | Config validator | `python:3.12-alpine@sha256:b658b05ce9c4eb97ec6fc19424818a1f31993659c2b505a532f470e83807815d` | Reused from the host-metrics image. |
+| MCP host rewrite | `nginx:1.27-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10` | Sidecar for fly-over and weather MCP only. |
 
 Update one module at a time: change its backend pin in the module manifest, reconcile, verify the
 frontend block and MCP call, then record the new combination. Rollback is a Git revert.

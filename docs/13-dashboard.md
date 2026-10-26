@@ -53,6 +53,7 @@ or MCP ingress, CORS configuration, or authentication in v1.
 | Procrastinator backend | `ghcr.io/sousa99/procrastinator-tracker-backend:0.2.0` |
 | Weather backend | `ghcr.io/sousa99/weather-psychic-backend:0.1.0` |
 | Config validator | `python:3.12-alpine@sha256:b658b05ce9c4eb97ec6fc19424818a1f31993659c2b505a532f470e83807815d` |
+| MCP host rewrite | `nginx:1.27-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10` |
 
 The module backend images are publicly pullable. The dashboard image was **not** anonymously
 pullable during implementation. Resolve this before expecting the frontend pod to start.
@@ -208,7 +209,12 @@ kubectl run mcp-smoke --rm -i --restart=Never --image=curlimages/curl:8.10.1 -- 
   http://bus-catcher-mcp.dashboard.svc.cluster.local:3001/mcp
 ```
 
-Repeat for the other three URLs. Local debugging uses port-forward, not an ingress:
+Repeat for the other three URLs. The fly-over and weather MCP pods run an nginx `host-rewrite`
+sidecar because those published servers reject a Kubernetes Service DNS Host header with
+`Invalid Host`. The sidecar listens on 3001, proxies to the MCP process on `127.0.0.1:3002`, and
+sends `Host: localhost`; consumers still use the normal Service URL. Bus and tasks need no sidecar.
+
+Local debugging uses port-forward, not an ingress:
 
 ```bash
 kubectl -n dashboard port-forward svc/bus-catcher-mcp 3200:3001

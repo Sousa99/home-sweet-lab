@@ -103,9 +103,9 @@ or agent deployment is required.
 ### Implementation for User Story 2
 
 - [X] T024 [P] [US2] Create `apps/dashboard/bus-catcher-mcp.yaml` with Deployment `bus-catcher-mcp` (image `ghcr.io/sousa99/bus-catcher-backend:0.2.0`, command `node dist/index.js --mcp`, env `PORT=3000`/`MCP_PORT=3001`/`DB_PATH=/data/bus-catcher.db`, volume `bus-catcher-data` at `/data`, TCP 3001 probes, component label `mcp`, `Recreate`, resource limits) and ClusterIP Service `bus-catcher-mcp:3001`.
-- [X] T025 [P] [US2] Create `apps/dashboard/fly-over-tracker-mcp.yaml` with Deployment `fly-over-tracker-mcp` (image `ghcr.io/sousa99/fly-over-tracker-backend:0.5.0`, command `node dist/index.js --mcp`, env `HOST=0.0.0.0`/`PORT=3000`/`MCP_PORT=3001`, TCP 3001 probes, component label `mcp`, `Recreate`, resource limits) and ClusterIP Service `fly-over-tracker-mcp:3001`.
+- [X] T025 [P] [US2] Create `apps/dashboard/fly-over-tracker-mcp.yaml` with Deployment `fly-over-tracker-mcp` (image `ghcr.io/sousa99/fly-over-tracker-backend:0.5.0`, command `node dist/index.js --mcp`, env `HOST=127.0.0.1`/`PORT=3000`/`MCP_PORT=3002`, TCP 3002 probes) plus an nginx `host-rewrite` sidecar on 3001 using `apps/dashboard/mcp-host-rewrite.conf` to set `Host: localhost`, component label `mcp`, `Recreate`, resource limits, and ClusterIP Service `fly-over-tracker-mcp:3001` targeting `mcp-proxy`.
 - [X] T026 [P] [US2] Create `apps/dashboard/procrastinator-tracker-mcp.yaml` with Deployment `procrastinator-tracker-mcp` (image `ghcr.io/sousa99/procrastinator-tracker-backend:0.2.0`, command `sh -c 'node dist/migrate.js && node dist/index.js --mcp'`, env `PORT=3000`/`MCP_PORT=3001`/`DATABASE_URL=/data/procrastinator.db`, volume `procrastinator-data` at `/data`, TCP 3001 probes, component label `mcp`, `Recreate`, resource limits) and ClusterIP Service `procrastinator-tracker-mcp:3001`.
-- [X] T027 [P] [US2] Create `apps/dashboard/weather-psychic-mcp.yaml` with Deployment `weather-psychic-mcp` (image `ghcr.io/sousa99/weather-psychic-backend:0.1.0`, command `node dist/index.js --mcp`, env `HOST=0.0.0.0`/`PORT=3000`/`MCP_PORT=3001`, TCP 3001 probes, component label `mcp`, `Recreate`, resource limits) and ClusterIP Service `weather-psychic-mcp:3001`.
+- [X] T027 [P] [US2] Create `apps/dashboard/weather-psychic-mcp.yaml` with Deployment `weather-psychic-mcp` (image `ghcr.io/sousa99/weather-psychic-backend:0.1.0`, command `node dist/index.js --mcp`, env `HOST=127.0.0.1`/`PORT=3000`/`MCP_PORT=3002`, TCP 3002 probes) plus an nginx `host-rewrite` sidecar on 3001 using `apps/dashboard/mcp-host-rewrite.conf` to set `Host: localhost`, component label `mcp`, `Recreate`, resource limits, and ClusterIP Service `weather-psychic-mcp:3001` targeting `mcp-proxy`.
 - [X] T028 [US2] Add the four MCP files to `apps/dashboard/kustomization.yaml`.
 - [ ] T029 [US2] Run `./scripts/validate.sh`, reconcile Flux, and verify all four MCP Deployments and Services are Ready, all MCP endpoints are `ClusterIP`, and none have an Ingress, Tailscale host, NodePort, or LoadBalancer.
 - [ ] T030 [P] [US2] From a pod in another namespace, send an MCP initialize request to all four URLs in `specs/004-dashboard-stack/contracts/mcp-services.md`; record the exact URLs and expected response in `docs/13-dashboard.md`.
@@ -165,8 +165,11 @@ T018 (real household config Secret), T019–T022 and T029–T032 (Flux reconcili
 T036 (backup/restore drill), T041–T042 (recovery and node-reboot drills), T047 (end-to-end quickstart).
 
 The repository artifacts pass `./scripts/validate.sh`, `kubectl apply --dry-run=server`, nginx
-configuration syntax validation, and the Python validator tests. The cluster has only the manually
-created `dashboard` namespace; the app has not been reconciled by Flux.
+configuration syntax validation, and the Python validator tests. The app was reconciled by Flux;
+all eight module pods are Ready. The frontend pod is waiting on the private dashboard image. Live
+verification found that fly-over and weather MCP reject the Kubernetes Service Host header, so both
+now use the nginx `host-rewrite` sidecar documented in `research.md` R12. Bus and task REST/MCP
+health and the bus/task MCP initialize calls pass from the `home-assistant` namespace.
 
 ## Dependencies & Execution Order
 

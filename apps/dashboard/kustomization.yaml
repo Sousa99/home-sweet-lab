@@ -21,3 +21,6 @@ configMapGenerator:
   - name: dashboard-config-check
     files:
       - validate-config.py
+  - name: dashboard-mcp-host-rewrite
+    files:
+      - mcp-host-rewrite.conf

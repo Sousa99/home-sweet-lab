@@ -106,7 +106,8 @@ apps/
 └── dashboard/
     ├── kustomization.yaml                 # resources + generated ConfigMaps
     ├── namespace.yaml                     # dashboard namespace
-    ├── nginx.conf                         # Kubernetes-compatible proxy config
+    ├── nginx.conf                         # Kubernetes-compatible frontend proxy config
+    ├── mcp-host-rewrite.conf              # nginx sidecar for fly/weather MCP Host validation
     ├── validate-config.py                 # runtime config validator (also init container)
     ├── test_validate_config.py            # validator unit tests
     ├── config.example.json                # non-sensitive placeholder config
@@ -165,6 +166,10 @@ critical outcomes are:
    deferred because it adds tooling and has no v1 requirement.
 6. The dashboard GHCR package is currently not anonymously pullable. The supported path is to make
    the package public; a documented `ghcr-pull` Secret is the fallback.
+7. The fly-over and weather MCP servers use the Hono MCP helper's localhost Host validation. Each
+   gets an nginx `host-rewrite` sidecar that listens on 3001, proxies to the MCP process on
+   `127.0.0.1:3002`, and sets `Host: localhost` plus a localhost Origin. The Service contract stays
+   `<module>-mcp...:3001/mcp`.
 
 ## Phase 1 Design Outputs
 

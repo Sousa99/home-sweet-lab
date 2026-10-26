@@ -22,9 +22,9 @@ The agent repository should use the cross-namespace form. The short form is for 
 | Module | MCP command | Required environment |
 | ------ | ----------- | -------------------- |
 | bus-catcher | `node dist/index.js --mcp` | `PORT=3000`, `MCP_PORT=3001`, `DB_PATH=/data/bus-catcher.db` |
-| fly-over-tracker | `node dist/index.js --mcp` | `HOST=0.0.0.0`, `PORT=3000`, `MCP_PORT=3001` |
+| fly-over-tracker | `node dist/index.js --mcp` | `HOST=127.0.0.1`, `PORT=3000`, `MCP_PORT=3002`; nginx `host-rewrite` sidecar on 3001 |
 | procrastinator-tracker | `sh -c 'node dist/migrate.js && node dist/index.js --mcp'` | `PORT=3000`, `MCP_PORT=3001`, `DATABASE_URL=/data/procrastinator.db` |
-| weather-psychic | `node dist/index.js --mcp` | `HOST=0.0.0.0`, `PORT=3000`, `MCP_PORT=3001` |
+| weather-psychic | `node dist/index.js --mcp` | `HOST=127.0.0.1`, `PORT=3000`, `MCP_PORT=3002`; nginx `host-rewrite` sidecar on 3001 |
 
 ## Transport contract
 
@@ -36,6 +36,24 @@ The agent repository should use the cross-namespace form. The short form is for 
 - No MCP-level authentication is implemented. The cluster network boundary is the control.
 - The MCP process may also have an HTTP listener environment (`PORT`), but clients must use the MCP
   port and path above.
+
+## Host-header workaround
+
+Fly-over-tracker and weather-psychic use the Hono MCP helper's localhost DNS-rebinding protection.
+When the module does not pass a `host` option, the helper defaults to `127.0.0.1` and rejects any
+request whose Host header is a Kubernetes Service name, returning `Invalid Host: <service>`.
+
+Each of those pods therefore runs an nginx `host-rewrite` sidecar:
+
+- The MCP process listens on `127.0.0.1:3002`.
+- nginx listens on `3001`, proxies to `127.0.0.1:3002`, sets `Host: localhost` and
+  `Origin: http://localhost`, disables proxy buffering, and uses long SSE read/send timeouts.
+- The Service still targets the sidecar's `mcp-proxy` port 3001. Consumers do not need a custom Host
+  header.
+
+Bus-catcher and procrastinator accept the Service DNS Host and have no sidecar. If a consumer or
+proxy overwrites the Host header before the sidecar, initialize requests can fail with the same
+`Invalid Host` error; keep the normal Service URL.
 
 ## Service shape
 
