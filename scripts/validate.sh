@@ -37,8 +37,10 @@ fi
 if command -v python3 >/dev/null 2>&1; then
     echo "Running host-metrics exporter tests"
     python3 -m unittest discover -s "$repo_root/apps/host-metrics" -p 'test_*.py'
+    echo "Running dashboard config validator tests"
+    python3 -m unittest discover -s "$repo_root/apps/dashboard" -p 'test_*.py'
 else
-    echo "python3 not found; skipping host-metrics exporter tests" >&2
+    echo "python3 not found; skipping Python tests" >&2
 fi
 
 if command -v gitleaks >/dev/null 2>&1; then

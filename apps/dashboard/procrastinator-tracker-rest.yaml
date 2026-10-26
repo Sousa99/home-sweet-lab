@@ -1,0 +1,113 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: procrastinator-tracker-rest
+  namespace: dashboard
+  labels:
+    app.kubernetes.io/name: procrastinator-tracker
+    app.kubernetes.io/component: rest
+    app.kubernetes.io/part-of: home-sweet-lab
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: procrastinator-tracker
+      app.kubernetes.io/component: rest
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: procrastinator-tracker
+        app.kubernetes.io/component: rest
+        app.kubernetes.io/part-of: home-sweet-lab
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 15
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      nodeSelector:
+        kubernetes.io/hostname: dietpi
+        kubernetes.io/arch: amd64
+      containers:
+        - name: rest
+          image: ghcr.io/sousa99/procrastinator-tracker-backend:0.2.0
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - node dist/migrate.js && node dist/index.js --http
+          env:
+            - name: PORT
+              value: "3000"
+            - name: MCP_PORT
+              value: "3001"
+            - name: DATABASE_URL
+              value: /data/procrastinator.db
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          securityContext:
+            allowPrivilegeEscalation: false
+            privileged: false
+            capabilities:
+              drop:
+                - ALL
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 3
+            failureThreshold: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: procrastinator-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: procrastinator-tracker-rest
+  namespace: dashboard
+  labels:
+    app.kubernetes.io/name: procrastinator-tracker
+    app.kubernetes.io/component: rest
+    app.kubernetes.io/part-of: home-sweet-lab
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: procrastinator-tracker
+    app.kubernetes.io/component: rest
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http
+      protocol: TCP

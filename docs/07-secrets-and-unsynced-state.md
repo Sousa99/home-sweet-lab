@@ -19,6 +19,8 @@ else lives on the persistent volume and moves through explicit, documented opera
 | `media/`, `tts/`, `www/community/` | Local media, generated TTS, HACS assets | PVC only; state bundle |
 | `home-assistant.log*`, `.cache/`, `deps/` | Logs and regenerable caches | Not backed up |
 | Kubernetes Secrets | Cluster credentials, including `operator-oauth` | Manual `kubectl`; never Git |
+| Dashboard configuration | Household JSON in the manual `dashboard-config` Secret | Manual `kubectl`; never Git; recreate after a rebuild |
+| Dashboard GHCR pull credential | Optional `ghcr-pull` Secret when the dashboard package is private | Manual `kubectl`; never Git |
 
 The current Home Assistant configuration has no `secrets.yaml`; verify before assuming one exists.
 `.storage` still contains integration credentials and must be treated as secret.
@@ -83,6 +85,46 @@ volumes:
 
 Alternatively, keep `secrets.yaml` on the PVC via the state bundle. Do not do both with different
 contents; pick one and document it.
+
+### Dashboard configuration
+
+The dashboard frontend reads `/config.json`, which contains the household location, bus stops, line
+filters, and display choices. Because the repository is public, those values are not committed. The
+real file lives in the manual Secret `dashboard-config` in the `dashboard` namespace:
+
+| Key | Value |
+| --- | ----- |
+| `config.json` | The validated dashboard JSON |
+
+Create or update it with:
+
+```bash
+python3 apps/dashboard/validate-config.py ~/dashboard-config.json
+./scripts/create-dashboard-config-secret.sh ~/dashboard-config.json
+kubectl -n dashboard delete pod -l app.kubernetes.io/name=dashboard
+```
+
+The frontend init container validates the mounted file and refuses to start if it is missing or
+invalid. The dashboard's application loader would otherwise silently fall back to built-in defaults.
+Keep the private JSON in the operator's password manager or encrypted backup inventory; it is not
+part of the Home Assistant state bundle.
+
+### Dashboard GHCR pull credential (optional)
+
+The dashboard image (`ghcr.io/sousa99/home-sweet-home-dashboard:0.1.0`) was not anonymously pullable
+when the stack was implemented. The supported fix is to make the GHCR package public. If it must stay
+private, create a `read:packages` token and a pull Secret:
+
+```bash
+kubectl -n dashboard create secret docker-registry ghcr-pull \
+  --docker-server=ghcr.io \
+  --docker-username=<github-user> \
+  --docker-password=<read-packages-token>
+```
+
+Then add `imagePullSecrets: [{name: ghcr-pull}]` to the frontend pod template in
+`apps/dashboard/frontend.yaml`. Never commit the token. If the package is made public, do not add the
+reference.
 
 Rules:
 

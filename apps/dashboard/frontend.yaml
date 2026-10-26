@@ -1,0 +1,143 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dashboard
+  namespace: dashboard
+  labels:
+    app.kubernetes.io/name: dashboard
+    app.kubernetes.io/part-of: home-sweet-lab
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: dashboard
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: dashboard
+        app.kubernetes.io/part-of: home-sweet-lab
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 10
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      nodeSelector:
+        kubernetes.io/hostname: dietpi
+        kubernetes.io/arch: amd64
+      initContainers:
+        - name: validate-config
+          image: python:3.12-alpine@sha256:b658b05ce9c4eb97ec6fc19424818a1f31993659c2b505a532f470e83807815d
+          imagePullPolicy: IfNotPresent
+          command:
+            - python3
+            - /check/validate-config.py
+            - /config/config.json
+          env:
+            - name: PYTHONDONTWRITEBYTECODE
+              value: "1"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65534
+            runAsGroup: 65534
+            privileged: false
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: config
+              mountPath: /config
+              readOnly: true
+            - name: config-check
+              mountPath: /check
+              readOnly: true
+      containers:
+        - name: dashboard
+          image: ghcr.io/sousa99/home-sweet-home-dashboard:0.1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          securityContext:
+            allowPrivilegeEscalation: false
+            privileged: false
+          startupProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 3
+            failureThreshold: 5
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+          volumeMounts:
+            - name: config
+              mountPath: /usr/share/nginx/html/config.json
+              subPath: config.json
+              readOnly: true
+            - name: nginx-config
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: nginx.conf
+              readOnly: true
+      volumes:
+        - name: config
+          secret:
+            secretName: dashboard-config
+        - name: nginx-config
+          configMap:
+            name: dashboard-nginx
+            items:
+              - key: nginx.conf
+                path: nginx.conf
+        - name: config-check
+          configMap:
+            name: dashboard-config-check
+            items:
+              - key: validate-config.py
+                path: validate-config.py
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dashboard
+  namespace: dashboard
+  labels:
+    app.kubernetes.io/name: dashboard
+    app.kubernetes.io/part-of: home-sweet-lab
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: dashboard
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP

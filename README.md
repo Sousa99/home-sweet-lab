@@ -23,17 +23,23 @@ Mac (development) ──git push──▶ GitHub: home-sweet-lab
                     ├── monitoring namespace
                     │     ├── host-metrics exporter ──▶ ClusterIP :9100
                     │     └── mosquitto broker ──▶ ClusterIP :1883 ──▶ HA MQTT
+                    ├── dashboard namespace
+                    │     ├── dashboard frontend ──▶ Tailscale Ingress :443
+                    │     ├── four REST APIs ──▶ ClusterIP :3000
+                    │     └── four MCP servers ──▶ ClusterIP :3001
                     ├── tailscale namespace (operator + ingress proxy)
                     └── Traefik ──▶ future apps at /
 ```
 
 ## Status
 
-Phase 7: Flux reconciles the host-metrics exporter and the MQTT device-grouping path from `main` into
-the `monitoring` namespace. The exporter and Mosquitto broker are Ready on `dietpi`; retained
-discovery, state, and availability are verified. The remaining work is the manual Home Assistant
-MQTT integration and a maintenance-window node reboot. Home Assistant continues to run from the published
-image, private state lives on a 10 GiB PVC, and the UI is served with HTTPS at
+Phase 8: Flux reconciles Home Assistant, the host-metrics exporter, and the MQTT device-grouping path
+from `main`. Home Assistant, the exporter, and Mosquitto are Ready on `dietpi`; retained discovery,
+state, and availability are verified. The dashboard stack manifests, scripts, and validation are in
+place in `apps/dashboard`; cluster deployment awaits the dashboard GHCR package visibility decision,
+a manual dashboard configuration Secret, and Git reconciliation. The remaining Home Assistant work
+is the manual MQTT integration and a maintenance-window node reboot. Home Assistant continues to run
+from the published image, private state lives on a 10 GiB PVC, and the UI is served with HTTPS at
 `https://home-assistant.<tailnet>.ts.net/`. Zigbee is connected through `/dev/zbt2`. Backup pulls,
 manifest validation, and restore hardening are in place; the destructive full-rebuild drills remain
 a maintenance-window task.
@@ -57,6 +63,7 @@ The baseline specification is
 | [10-ui-to-git](docs/10-ui-to-git.md) | Pull UI YAML changes into the checkout for review |
 | [11-host-metrics](docs/11-host-metrics.md) | HTTP exporter, metric contract, legacy Scrape UI, recovery |
 | [12-host-metrics-mqtt](docs/12-host-metrics-mqtt.md) | MQTT broker, one-device discovery, HA MQTT UI, migration |
+| [13-dashboard](docs/13-dashboard.md) | Dashboard frontend, REST proxy, MCP services, config, backup, recovery |
 
 Host-specific notes: [`host/dietpi/`](host/dietpi/).
 
@@ -70,7 +77,8 @@ Host-specific notes: [`host/dietpi/`](host/dietpi/).
 | GitOps | Flux controllers in `flux-system` | This repository |
 | Network | Tailscale on the host and the Kubernetes Operator, MagicDNS, HTTPS | This repository (documented) |
 | Monitoring | Internal host-metrics exporter and Mosquitto MQTT broker (ClusterIP only); no Prometheus/Grafana | This repository |
-| Deployment | Home Assistant manifests, image tag; host-metrics manifests | This repository |
+| Dashboard | Frontend, four REST APIs, four MCP servers, two SQLite PVCs | This repository |
+| Deployment | Home Assistant manifests, image tag; host-metrics manifests; dashboard manifests | This repository |
 | Configuration | Home Assistant YAML, automations, dashboards | `home-sweet-home-home-assistant` |
 | Private state | `.storage`, DBs, `secrets.yaml`, backups | Manual, never committed |
 
@@ -104,7 +112,7 @@ See the secrets and recovery documents listed in [`docs/`](docs/README.md).
 ```text
 clusters/dietpi/          Flux entry point and generated flux-system manifests
 infrastructure/           Cluster-wide resources managed by Flux
-apps/                     Workloads (Home Assistant, host-metrics)
+apps/                     Workloads (Home Assistant, host-metrics, dashboard)
 scripts/                  Operational helpers (config pull, state bundles, backups, validation)
 host/                     Host-specific notes and udev rules
 docs/                     Setup, access, Flux, Home Assistant, recovery
@@ -121,6 +129,8 @@ specs/                    Spec-driven deliverables
 - Home Assistant: `https://home-assistant.<tailnet>.ts.net/`, served by the Tailscale Kubernetes
   Operator with a Tailscale-issued certificate. The host's Traefik no longer serves Home Assistant;
   `/` is free for a future landing page.
+- Dashboard: `https://dashboard.<tailnet>.ts.net/` after the dashboard stack is reconciled. Only the
+  frontend is exposed; REST and MCP stay cluster-internal. See [13-dashboard](docs/13-dashboard.md).
 
 ## Related repositories
 
@@ -134,8 +144,8 @@ specs/                    Spec-driven deliverables
 ## Non-goals for v1
 
 High availability, replicated storage, public TLS/cert-manager, multi-node scheduling, automated
-offsite backups, and migrating the other `home-sweet-home-*` workloads. The layout leaves room for
-them.
+offsite backups, dashboard/MCP authentication, and migrating the agent and modules. The layout leaves
+room for them.
 
 ## Safety rules
 

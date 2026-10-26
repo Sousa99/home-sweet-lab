@@ -1,0 +1,36 @@
+{
+  "clock": {
+    "defaultFormat": "24h",
+    "switchable": false,
+    "align": "right"
+  },
+  "bus": {
+    "stops": []
+  },
+  "flights": {
+    "location": { "lat": 0, "lng": 0, "radiusKm": 1 },
+    "autoRefresh": 30,
+    "maxResults": 5,
+    "debugMap": false
+  },
+  "tasks": {
+    "filters": { "finished": false },
+    "refreshRateMs": 30000,
+    "autoRotateMs": 4000,
+    "transitionVariant": "slide-up",
+    "slideDurationMs": 750
+  },
+  "weather": {
+    "location": {
+      "id": 1,
+      "name": "Placeholder",
+      "latitude": 0,
+      "longitude": 0,
+      "timezone": "UTC",
+      "country": "Placeholder"
+    },
+    "refetchIntervalMs": 900000
+  },
+  "status": { "intervalMs": 30000 },
+  "placeholders": []
+}

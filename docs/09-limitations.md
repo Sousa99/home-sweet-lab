@@ -129,6 +129,36 @@ These are deliberate v1 boundaries. They are documented so they are not mistaken
   external access. The Kubernetes node, hostname, Linux user, and OS remain `dietpi`; only the Home
   Assistant device identity is `home-sweet-lab-server`.
 
+## Dashboard stack
+
+- The dashboard frontend is reachable only at `https://dashboard.<tailnet>.ts.net/`. A TV or display
+  that cannot join the tailnet cannot open it in v1.
+- The browser reaches the four REST APIs only through the dashboard's same-origin `/api/<module>/`
+  proxy. There is no direct REST ingress, CORS configuration, or API authentication.
+- The four MCP servers are cluster-internal for `home-sweet-home-agent`. There is no MCP ingress or
+  MCP authentication; local clients use `kubectl port-forward`.
+- One node, one replica per workload, and `local-path` storage. Bus and task SQLite data has no
+  replication, snapshot, or automated offsite backup.
+- The dashboard image was not anonymously pullable when the stack was implemented. Until the GHCR
+  package is public or a `ghcr-pull` Secret is referenced, the frontend pod cannot start. The module
+  backend images are public.
+- The dashboard's embedded components packages and module backend images version independently. A
+  mismatched frontend/backend pair can render or call APIs incorrectly; update one module at a time
+  and roll back by Git revert.
+- The household configuration is a manual Secret. The frontend init container validates it, but a
+  valid file with the wrong-but-valid coordinates cannot be detected. The operator owns the content.
+- A configuration change requires a frontend pod restart. The browser reads `/config.json` at page
+  load; the file is served with `no-store`.
+- The procrastinator MCP server is single-session per container lifetime. Restarting its pod drops
+  the session, not the SQLite data.
+- Dashboard backups use a maintenance window: Flux is suspended, the four stateful Deployments are
+  scaled to zero, the PVCs are copied, and normal operation is restored. The frontend remains up but
+  bus/task blocks are unavailable during the window.
+- The dashboard has no SSO or user accounts. Tailscale ACLs are the access boundary for the frontend;
+  cluster network access is the boundary for MCP, and the cluster has no reliable NetworkPolicy layer.
+- External weather, flight, and GTFS providers are dependencies. Their outages degrade only the
+  affected block or first-run ingest; they do not stop the cluster workloads.
+
 ## Operations
 
 - No Prometheus, Grafana, alerting, log aggregation, or dashboarding beyond Lens, `kubectl`, the
@@ -139,13 +169,13 @@ These are deliberate v1 boundaries. They are documented so they are not mistaken
 - k3s and kube-router have required a service sync restart and a node reboot after network policy
   changes. Treat network policy changes as maintenance-window work and verify controller traffic
   afterward.
-- The other `home-sweet-home-*` workloads (agent, dashboard, modules) are not migrated in v1.
+- The other `home-sweet-home-*` workloads (agent and modules) are not migrated in v1; the dashboard stack is documented in [`13-dashboard.md`](13-dashboard.md).
 
 ## Future work, roughly ordered
 
 1. Pull backups off the node automatically and verify them.
 2. Add monitoring and alerting for node, Flux, PVC, and Home Assistant.
-3. Add a landing page or dashboard at `/`.
+3. Add a landing page at `/`; the dashboard is served on Tailscale, not Traefik.
 4. Add a secret manager or SOPS with age for reproducible secrets, including `operator-oauth`.
 5. Narrow device access instead of `privileged: true`.
 6. Pin the Home Assistant base image and test upgrades deliberately.

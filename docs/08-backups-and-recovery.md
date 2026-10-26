@@ -12,6 +12,8 @@ Status: pull script implemented; drills executed on 2026-10-25.
 | Home Assistant backups | PVC `/config/backups` | Pulled copies on the Mac and offsite storage |
 | k3s datastore | DietPi `/var/lib/rancher/k3s/server/db` | Cold copy on the host or external disk |
 | Manual Kubernetes Secrets | Cluster | Password manager |
+| Dashboard SQLite data | `dashboard` PVCs `bus-catcher-data` and `procrastinator-data` | Dashboard backup archive pulled to the Mac |
+| Dashboard configuration JSON | Manual Secret `dashboard-config` | Operator's password manager or encrypted backup inventory |
 | Tailscale operator OAuth client | Cluster `operator-oauth` Secret and Tailscale admin console | Password manager / Tailscale admin console |
 | kubeconfig and Tailscale auth | Operator devices | Regenerate / re-enroll |
 
@@ -65,6 +67,41 @@ For v1:
 Backups contain credentials, device keys, and household data. Never commit them and never upload them
 to a public artifact store.
 
+## Dashboard stack backups
+
+The dashboard has its own SQLite databases: bus-catcher and procrastinator-tracker. They are not
+part of the Home Assistant state bundle. The backup is a maintenance-window stop-copy-start because
+SQLite must not be copied while writers are active.
+
+```bash
+cd ~/Desktop/code/home-sweet-lab
+./scripts/pull-dashboard-data.sh
+ls -l ~/backups/home-sweet-lab/dashboard/<timestamp>/
+sha256sum -c ~/backups/home-sweet-lab/dashboard/<timestamp>/SHA256SUMS
+```
+
+`pull-dashboard-data.sh` suspends the `apps` Flux Kustomization, scales the four stateful module
+Deployments to zero, runs a temporary pinned Python helper pod to archive both PVCs with SHA-256,
+copies the archive to the Mac, scales back, and resumes Flux. A trap restores Flux and replicas on
+failure. The frontend stays up but the bus/task blocks are unavailable during the window.
+
+The archive contains `bus-catcher/bus-catcher.db` and
+`procrastinator/procrastinator.db` under `dashboard-data.tar.gz`, plus `SHA256SUMS`.
+
+Restore:
+
+```bash
+./scripts/restore-dashboard-data.sh \
+  ~/backups/home-sweet-lab/dashboard/<timestamp>/dashboard-data.tar.gz
+```
+
+The script verifies the checksum before touching the PVCs, stops the stateful writers, clears the two
+data directories, extracts the archive, and restarts the workloads. Verify the dashboard blocks and
+the four MCP endpoints after the rollouts complete.
+
+Never commit the archive, checksum, or SQLite files. Keep at least the previous archive and an
+encrypted offsite copy if the dashboard data matters.
+
 ## Restore procedures
 
 ### Pod lost, volume intact
@@ -90,6 +127,16 @@ kubectl -n home-assistant rollout status deployment/home-assistant --timeout=10m
 3. Upload the newest state bundle with `scripts/upload-state-bundle.sh`.
 4. Restart Home Assistant and watch `restore-state` and `configure-http`.
 5. If the bundle is incomplete, restore a Home Assistant backup from the UI instead.
+
+### Dashboard volume lost
+
+1. Confirm the PVC is gone and let Flux recreate it, or apply the dashboard PVC manifests.
+2. Stop the four stateful dashboard Deployments with the documented backup/restore maintenance
+   procedure.
+3. Restore the latest checksum-verified dashboard archive with
+   `./scripts/restore-dashboard-data.sh <archive>`.
+4. Verify bus departures, task data, and the four MCP endpoints.
+5. Pull a fresh dashboard backup and record the drill date.
 
 ### Full cluster rebuild
 
@@ -151,6 +198,8 @@ contains the desired state.
 | Missing ZBT-2 | Not executed: would disconnect Zigbee; fail-fast behavior is documented |
 | Restore a backup through the Home Assistant UI | Not executed: requires UI authentication and a maintenance window |
 | Secret scan of both repositories | Passed: `gitleaks` found no leaks |
+| Dashboard backup/restore | Pending: stack not yet reconciled to the cluster |
+| Dashboard node reboot and MCP recovery | Pending: stack not yet reconciled to the cluster |
 
 The full PVC and cluster rebuild drills must be run before treating the recovery time objective as
 proven.
