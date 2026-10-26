@@ -70,7 +70,7 @@ reach their backends. No MCP client is required.
 
 ### Implementation for User Story 1
 
-- [X] T009 [P] [US1] Create `apps/dashboard/bus-catcher-rest.yaml` with Deployment `bus-catcher-rest` (image `ghcr.io/sousa99/bus-catcher-backend:0.2.0`, command `node dist/index.js --http`, env `PORT=3000`/`MCP_PORT=3001`/`DB_PATH=/data/bus-catcher.db`, volume `bus-catcher-data` at `/data`, `/api/health` probes, component label `rest`, `Recreate`, bus-specific resource limits 250m/512Mi to 2/8Gi from data-model.md) and ClusterIP Service `bus-catcher-rest:3000`.
+- [X] T009 [P] [US1] Create `apps/dashboard/bus-catcher-rest.yaml` with Deployment `bus-catcher-rest` (image `ghcr.io/sousa99/bus-catcher-backend:0.2.0`, command `node dist/index.js --http`, env `PORT=3000`/`MCP_PORT=3001`/`DB_PATH=/data/bus-catcher.db`, volume `bus-catcher-data` at `/data`, `/api/health` probes, component label `rest`, `Recreate`, bus-specific resource limits 250m/512Mi to 2/10Gi from data-model.md) and ClusterIP Service `bus-catcher-rest:3000`.
 - [X] T010 [P] [US1] Create `apps/dashboard/fly-over-tracker-rest.yaml` with Deployment `fly-over-tracker-rest` (image `ghcr.io/sousa99/fly-over-tracker-backend:0.5.0`, command `node dist/index.js --http`, env `HOST=0.0.0.0`/`PORT=3000`/`MCP_PORT=3001`/`SNAPSHOT_CACHE_TTL_MS=60000`, TCP 3000 probes, component label `rest`, `Recreate`, resource limits) and ClusterIP Service `fly-over-tracker-rest:3000`.
 - [X] T011 [P] [US1] Create `apps/dashboard/procrastinator-tracker-rest.yaml` with Deployment `procrastinator-tracker-rest` (image `ghcr.io/sousa99/procrastinator-tracker-backend:0.2.0`, command `sh -c 'node dist/migrate.js && node dist/index.js --http'`, env `PORT=3000`/`MCP_PORT=3001`/`DATABASE_URL=/data/procrastinator.db`, volume `procrastinator-data` at `/data`, `/health` probes, component label `rest`, `Recreate`, resource limits) and ClusterIP Service `procrastinator-tracker-rest:3000`.
 - [X] T012 [P] [US1] Create `apps/dashboard/weather-psychic-rest.yaml` with Deployment `weather-psychic-rest` (image `ghcr.io/sousa99/weather-psychic-backend:0.1.0`, command `node dist/index.js --http`, env `HOST=0.0.0.0`/`PORT=3000`/`MCP_PORT=3001`, `/api/health` probes, component label `rest`, `Recreate`, resource limits) and ClusterIP Service `weather-psychic-rest:3000`.
@@ -170,7 +170,7 @@ all eight module pods are Ready. The frontend pod is waiting on the private dash
 verification found that fly-over and weather MCP reject the Kubernetes Service Host header, so both
 now use the nginx `host-rewrite` sidecar documented in `research.md` R12. All four REST health
 checks and all four MCP initialize calls pass from the `home-assistant` namespace. The first GTFS
-attempts OOMKilled `bus-catcher-rest` at 512Mi and 2Gi; its limit is now 8Gi, the bus PVC is 10Gi, and
+attempts OOMKilled `bus-catcher-rest` at 512Mi and 2Gi; its limit is now 10Gi, the bus PVC is 10Gi, and
 the ingest is being re-run.
 
 ## Dependencies & Execution Order

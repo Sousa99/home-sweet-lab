@@ -58,9 +58,8 @@ resume_flux() {
     if [ "$suspended_here" = "true" ]; then
         kubectl -n flux-system patch kustomization "$flux_kustomization" \
             --type merge -p '{"spec":{"suspend":false}}' >/dev/null 2>&1 || true
-        if command -v flux >/dev/null 2>&1; then
-            flux reconcile kustomization "$flux_kustomization" --with-source >/dev/null 2>&1 || true
-        fi
+        kubectl -n flux-system annotate kustomization "$flux_kustomization" \
+            reconcile.fluxcd.io/requestedAt="$(date +%s)" --overwrite >/dev/null 2>&1 || true
         suspended_here="false"
     fi
 }

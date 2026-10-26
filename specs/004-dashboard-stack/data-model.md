@@ -236,7 +236,7 @@ frontend block and MCP call, then record the new combination. Rollback is a Git 
 
 | Workload | CPU request | CPU limit | Memory request | Memory limit |
 | -------- | ----------- | --------- | -------------- | ------------ |
-| `bus-catcher-rest` | 250m | 2 | 512Mi | 8Gi |
+| `bus-catcher-rest` | 250m | 2 | 512Mi | 10Gi |
 | `bus-catcher-mcp` | 100m | 1 | 256Mi | 1Gi |
 | Other module containers (REST or MCP) | 50m | 500m | 128Mi | 512Mi |
 | Frontend | 25m | 250m | 32Mi | 128Mi |
@@ -245,7 +245,7 @@ frontend block and MCP call, then record the new combination. Rollback is a Git 
 974 MB uncompressed; the one-off ingest was OOMKilled at 2 GiB during validation. The worker unzips
 the archive and parses the 807 MB `stop_times.txt` in memory. The 10 GiB PVC leaves room for the
 indexed SQLite database. Totals are approximately 875m CPU and 1.75Gi memory requested; 6.5 CPU and
-10.6Gi memory at limits. Home Assistant, Flux, Tailscale, and k3s retain headroom; the bus limits
+14.1Gi memory at limits. Home Assistant, Flux, Tailscale, and k3s retain headroom; the bus limits
 are a deliberate exception for the one-off ingest and settle back after it completes.
 
 ## 7. State Transitions

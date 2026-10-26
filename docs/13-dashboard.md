@@ -331,7 +331,7 @@ check the node, PVC, and image-pull events.
 - Configuration changes require a frontend pod restart; the file is read at page load.
 - Backup/restore is a manual maintenance window, not an automated offsite backup.
 - The bus GTFS ingest is memory-heavy: the feed is about 77 MB compressed and 974 MB uncompressed.
-  The first attempts OOMKilled at 512 MiB and 2 GiB. `bus-catcher-rest` is capped at 8 GiB and the
+  The first attempts OOMKilled at 512 MiB and 2 GiB. `bus-catcher-rest` is capped at 10 GiB and the
   bus PVC is 10 GiB; this is a deliberate exception to the 512 MiB module limit. The high limit is
   for the one-off ingest; the process settles lower afterwards.
 - Home Assistant remains the higher-priority workload; dashboard resource limits protect it, but a
