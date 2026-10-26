@@ -51,7 +51,7 @@ story can be deployed.
 
 **⚠️ CRITICAL**: Complete this phase before deploying US1 or US2.
 
-- [X] T006 [P] Create `apps/dashboard/pvc.yaml` with `bus-catcher-data` and `procrastinator-data`, each 1 GiB, `ReadWriteOnce`, `storageClassName: local-path`, namespace `dashboard`.
+- [X] T006 [P] Create `apps/dashboard/pvc.yaml` with `bus-catcher-data` at 10 GiB and `procrastinator-data` at 1 GiB, `ReadWriteOnce`, `storageClassName: local-path`, namespace `dashboard`.
 - [X] T007 Create `scripts/create-dashboard-config-secret.sh`: create the `dashboard` namespace if absent, validate the input with `apps/dashboard/validate-config.py`, and create/update the `dashboard-config` Secret from `config.json` without printing values; support a path argument and fail safely.
 - [X] T008 [P] Create `apps/dashboard/nginx.conf` with the four same-origin routes in `specs/004-dashboard-stack/contracts/http-proxy.md`: static upstreams `bus-catcher-rest:3000`, `procrastinator-tracker-rest:3000`, `fly-over-tracker-rest:3000`, `weather-psychic-rest:3000`; strip `/api/<module>`; no Docker `127.0.0.11` resolver; serve the SPA and `/config.json` with `Cache-Control: no-store`; set the documented proxy headers and timeouts.
 
@@ -70,7 +70,7 @@ reach their backends. No MCP client is required.
 
 ### Implementation for User Story 1
 
-- [X] T009 [P] [US1] Create `apps/dashboard/bus-catcher-rest.yaml` with Deployment `bus-catcher-rest` (image `ghcr.io/sousa99/bus-catcher-backend:0.2.0`, command `node dist/index.js --http`, env `PORT=3000`/`MCP_PORT=3001`/`DB_PATH=/data/bus-catcher.db`, volume `bus-catcher-data` at `/data`, `/api/health` probes, component label `rest`, `Recreate`, bus-specific resource limits 100m/256Mi to 1/2Gi from data-model.md) and ClusterIP Service `bus-catcher-rest:3000`.
+- [X] T009 [P] [US1] Create `apps/dashboard/bus-catcher-rest.yaml` with Deployment `bus-catcher-rest` (image `ghcr.io/sousa99/bus-catcher-backend:0.2.0`, command `node dist/index.js --http`, env `PORT=3000`/`MCP_PORT=3001`/`DB_PATH=/data/bus-catcher.db`, volume `bus-catcher-data` at `/data`, `/api/health` probes, component label `rest`, `Recreate`, bus-specific resource limits 250m/512Mi to 2/8Gi from data-model.md) and ClusterIP Service `bus-catcher-rest:3000`.
 - [X] T010 [P] [US1] Create `apps/dashboard/fly-over-tracker-rest.yaml` with Deployment `fly-over-tracker-rest` (image `ghcr.io/sousa99/fly-over-tracker-backend:0.5.0`, command `node dist/index.js --http`, env `HOST=0.0.0.0`/`PORT=3000`/`MCP_PORT=3001`/`SNAPSHOT_CACHE_TTL_MS=60000`, TCP 3000 probes, component label `rest`, `Recreate`, resource limits) and ClusterIP Service `fly-over-tracker-rest:3000`.
 - [X] T011 [P] [US1] Create `apps/dashboard/procrastinator-tracker-rest.yaml` with Deployment `procrastinator-tracker-rest` (image `ghcr.io/sousa99/procrastinator-tracker-backend:0.2.0`, command `sh -c 'node dist/migrate.js && node dist/index.js --http'`, env `PORT=3000`/`MCP_PORT=3001`/`DATABASE_URL=/data/procrastinator.db`, volume `procrastinator-data` at `/data`, `/health` probes, component label `rest`, `Recreate`, resource limits) and ClusterIP Service `procrastinator-tracker-rest:3000`.
 - [X] T012 [P] [US1] Create `apps/dashboard/weather-psychic-rest.yaml` with Deployment `weather-psychic-rest` (image `ghcr.io/sousa99/weather-psychic-backend:0.1.0`, command `node dist/index.js --http`, env `HOST=0.0.0.0`/`PORT=3000`/`MCP_PORT=3001`, `/api/health` probes, component label `rest`, `Recreate`, resource limits) and ClusterIP Service `weather-psychic-rest:3000`.
@@ -79,7 +79,7 @@ reach their backends. No MCP client is required.
 - [X] T015 [US1] Create `apps/dashboard/kustomization.yaml` with namespace `dashboard`, resources `namespace.yaml`, `pvc.yaml`, the four REST files, `frontend.yaml`, and `tailscale-ingress.yaml`, plus `configMapGenerator` entries for `dashboard-nginx` from `nginx.conf` and `dashboard-config-check` from `validate-config.py`; add `dashboard` to `apps/kustomization.yaml`.
 - [X] T016 [US1] Run `./scripts/validate.sh` from the repository root and fix any render, schema, lint, unit-test, or secret-scan failure caused by the US1 manifests.
 - [ ] T017 [US1] Resolve dashboard image pullability per `specs/004-dashboard-stack/research.md` R6: verify `ghcr.io/sousa99/home-sweet-home-dashboard:0.1.0` pulls anonymously; if it does not, make the package public or create a `ghcr-pull` Secret and add the imagePullSecrets reference to `apps/dashboard/frontend.yaml`; record the chosen path in `docs/13-dashboard.md`.
-- [ ] T018 [US1] Create the real `dashboard-config` Secret from an external, validated JSON file using `scripts/create-dashboard-config-secret.sh`; if the frontend pod was waiting, delete it and confirm the init container accepts the file.
+- [X] T018 [US1] Create the real `dashboard-config` Secret from an external, validated JSON file using `scripts/create-dashboard-config-secret.sh`; if the frontend pod was waiting, delete it and confirm the init container accepts the file.
 - [ ] T019 [US1] Reconcile Flux and verify US1 per `specs/004-dashboard-stack/quickstart.md` sections 3–4: the five US1 Deployments (frontend plus four REST) Ready, both PVCs Bound, Ingress has a Tailscale hostname, the HTTPS page returns `200`, all four `/api/<module>/` health routes work, and no REST Service is externally exposed.
 - [ ] T020 [US1] Run the first bus GTFS ingest through `POST /api/bus/api/refresh`, verify departures for a configured stop, restart the bus REST pod, and confirm the data survives; record the result in `docs/13-dashboard.md`.
 - [ ] T021 [US1] Stop one REST backend, reload the dashboard, and verify only the affected block/status indicator degrades; restore the pod, confirm recovery, and record the result in `docs/13-dashboard.md`.
@@ -102,13 +102,13 @@ or agent deployment is required.
 
 ### Implementation for User Story 2
 
-- [X] T024 [P] [US2] Create `apps/dashboard/bus-catcher-mcp.yaml` with Deployment `bus-catcher-mcp` (image `ghcr.io/sousa99/bus-catcher-backend:0.2.0`, command `node dist/index.js --mcp`, env `PORT=3000`/`MCP_PORT=3001`/`DB_PATH=/data/bus-catcher.db`, volume `bus-catcher-data` at `/data`, TCP 3001 probes, component label `mcp`, `Recreate`, resource limits) and ClusterIP Service `bus-catcher-mcp:3001`.
+- [X] T024 [P] [US2] Create `apps/dashboard/bus-catcher-mcp.yaml` with Deployment `bus-catcher-mcp` (image `ghcr.io/sousa99/bus-catcher-backend:0.2.0`, command `node dist/index.js --mcp`, env `PORT=3000`/`MCP_PORT=3001`/`DB_PATH=/data/bus-catcher.db`, volume `bus-catcher-data` at `/data`, TCP 3001 probes, component label `mcp`, `Recreate`, bus-specific 100m/256Mi to 1/1Gi limits) and ClusterIP Service `bus-catcher-mcp:3001`.
 - [X] T025 [P] [US2] Create `apps/dashboard/fly-over-tracker-mcp.yaml` with Deployment `fly-over-tracker-mcp` (image `ghcr.io/sousa99/fly-over-tracker-backend:0.5.0`, command `node dist/index.js --mcp`, env `HOST=0.0.0.0`/`PORT=3000`/`MCP_PORT=3002`, TCP 3002 probes) plus an nginx `host-rewrite` sidecar on 3001 using `apps/dashboard/mcp-host-rewrite.conf` to set `Host: localhost`, component label `mcp`, `Recreate`, resource limits, and ClusterIP Service `fly-over-tracker-mcp:3001` targeting `mcp-proxy`.
 - [X] T026 [P] [US2] Create `apps/dashboard/procrastinator-tracker-mcp.yaml` with Deployment `procrastinator-tracker-mcp` (image `ghcr.io/sousa99/procrastinator-tracker-backend:0.2.0`, command `sh -c 'node dist/migrate.js && node dist/index.js --mcp'`, env `PORT=3000`/`MCP_PORT=3001`/`DATABASE_URL=/data/procrastinator.db`, volume `procrastinator-data` at `/data`, TCP 3001 probes, component label `mcp`, `Recreate`, resource limits) and ClusterIP Service `procrastinator-tracker-mcp:3001`.
 - [X] T027 [P] [US2] Create `apps/dashboard/weather-psychic-mcp.yaml` with Deployment `weather-psychic-mcp` (image `ghcr.io/sousa99/weather-psychic-backend:0.1.0`, command `node dist/index.js --mcp`, env `HOST=0.0.0.0`/`PORT=3000`/`MCP_PORT=3002`, TCP 3002 probes) plus an nginx `host-rewrite` sidecar on 3001 using `apps/dashboard/mcp-host-rewrite.conf` to set `Host: localhost`, component label `mcp`, `Recreate`, resource limits, and ClusterIP Service `weather-psychic-mcp:3001` targeting `mcp-proxy`.
 - [X] T028 [US2] Add the four MCP files to `apps/dashboard/kustomization.yaml`.
-- [ ] T029 [US2] Run `./scripts/validate.sh`, reconcile Flux, and verify all four MCP Deployments and Services are Ready, all MCP endpoints are `ClusterIP`, and none have an Ingress, Tailscale host, NodePort, or LoadBalancer.
-- [ ] T030 [P] [US2] From a pod in another namespace, send an MCP initialize request to all four URLs in `specs/004-dashboard-stack/contracts/mcp-services.md`; record the exact URLs and expected response in `docs/13-dashboard.md`.
+- [X] T029 [US2] Run `./scripts/validate.sh`, reconcile Flux, and verify all four MCP Deployments and Services are Ready, all MCP endpoints are `ClusterIP`, and none have an Ingress, Tailscale host, NodePort, or LoadBalancer.
+- [X] T030 [P] [US2] From a pod in another namespace, send an MCP initialize request to all four URLs in `specs/004-dashboard-stack/contracts/mcp-services.md`; record the exact URLs and expected response in `docs/13-dashboard.md`.
 - [ ] T031 [P] [US2] Exercise bus-catcher and procrastinator MCP operations that read or write data, then verify the same result through the REST API and the dashboard's next refresh; document the consistency result in `docs/13-dashboard.md`.
 - [ ] T032 [P] [US2] Disconnect and reconnect a procrastinator MCP client, restart the MCP pod if needed, and verify the task data survives; document the single-session caveat and restart command in `docs/13-dashboard.md` per `specs/004-dashboard-stack/contracts/mcp-services.md`.
 - [X] T033 [US2] Add the MCP section to `docs/13-dashboard.md`: URLs, port-forward debugging, single-session behavior, cross-namespace smoke command, and failure behavior.
@@ -170,8 +170,8 @@ all eight module pods are Ready. The frontend pod is waiting on the private dash
 verification found that fly-over and weather MCP reject the Kubernetes Service Host header, so both
 now use the nginx `host-rewrite` sidecar documented in `research.md` R12. All four REST health
 checks and all four MCP initialize calls pass from the `home-assistant` namespace. The first GTFS
-attempt OOMKilled `bus-catcher-rest` at 512Mi; its limit was raised to 2Gi and the ingest is being
-re-run.
+attempts OOMKilled `bus-catcher-rest` at 512Mi and 2Gi; its limit is now 8Gi, the bus PVC is 10Gi, and
+the ingest is being re-run.
 
 ## Dependencies & Execution Order
 

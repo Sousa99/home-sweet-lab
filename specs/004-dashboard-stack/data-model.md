@@ -180,7 +180,7 @@ All Services are `ClusterIP`. Only `dashboard` is referenced by the Tailscale In
 
 | Name | Size | Access mode | Storage class | Mount |
 | ---- | ---- | ----------- | ------------- | ----- |
-| `bus-catcher-data` | 1 GiB | ReadWriteOnce | `local-path` | `/data` in bus REST and MCP |
+| `bus-catcher-data` | 10 GiB | ReadWriteOnce | `local-path` | `/data` in bus REST and MCP |
 | `procrastinator-data` | 1 GiB | ReadWriteOnce | `local-path` | `/data` in procrastinator REST and MCP |
 
 Both PVCs use `WaitForFirstConsumer`, matching the default class. They are not backed up by storage
@@ -236,15 +236,17 @@ frontend block and MCP call, then record the new combination. Rollback is a Git 
 
 | Workload | CPU request | CPU limit | Memory request | Memory limit |
 | -------- | ----------- | --------- | -------------- | ------------ |
-| `bus-catcher-rest` | 100m | 1 | 256Mi | 2Gi |
+| `bus-catcher-rest` | 250m | 2 | 512Mi | 8Gi |
+| `bus-catcher-mcp` | 100m | 1 | 256Mi | 1Gi |
 | Other module containers (REST or MCP) | 50m | 500m | 128Mi | 512Mi |
 | Frontend | 25m | 250m | 32Mi | 128Mi |
 
-`bus-catcher-rest` needs a larger memory limit because the Carris GTFS feed is about 77 MB compressed
-and the one-off ingest exceeded 512Mi during validation, causing an OOMKill. The 2Gi limit leaves
-room for the download and parse on a 15 GiB node. Totals are approximately 475m CPU and 1.19Gi memory
-requested; 4.75 CPU and 5.63Gi memory at limits. Home Assistant, Flux, Tailscale, and k3s retain
-headroom.
+`bus-catcher-rest` needs the larger limit because the Carris GTFS feed is about 77 MB compressed and
+974 MB uncompressed; the one-off ingest was OOMKilled at 2 GiB during validation. The worker unzips
+the archive and parses the 807 MB `stop_times.txt` in memory. The 10 GiB PVC leaves room for the
+indexed SQLite database. Totals are approximately 875m CPU and 1.75Gi memory requested; 6.5 CPU and
+10.6Gi memory at limits. Home Assistant, Flux, Tailscale, and k3s retain headroom; the bus limits
+are a deliberate exception for the one-off ingest and settle back after it completes.
 
 ## 7. State Transitions
 

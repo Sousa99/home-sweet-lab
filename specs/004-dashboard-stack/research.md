@@ -183,13 +183,16 @@ using the fly feed for liveness (couples restart behavior to a third party).
 ## R8. Resource sizing
 
 **Decision**: Each REST/MCP container requests `50m` CPU and `128Mi` memory and limits to `500m` CPU
-and `512Mi` memory, except `bus-catcher-rest`, which requests `100m`/`256Mi` and limits to `1` CPU
-and `2Gi` memory. The frontend requests `25m`/`32Mi` and limits to `250m`/`128Mi`.
+and `512Mi` memory, except `bus-catcher-rest` (`250m`/`512Mi` to `2` CPU/`8Gi`) and
+`bus-catcher-mcp` (`100m`/`256Mi` to `1` CPU/`1Gi`). The bus PVC is 10 GiB. The frontend requests
+`25m`/`32Mi` and limits to `250m`/`128Mi`.
 
-**Rationale**: Eight Node processes plus nginx on a 15 GiB, 8 vCPU node. Total requests are about
-`475m` and `1.19Gi`; total limits are about `4.75` cores and `5.63Gi`. That leaves substantial
-headroom for Home Assistant, Flux, Tailscale, and k3s. The first GTFS ingest OOMKilled
-`bus-catcher-rest` at 512Mi during validation, so that one container gets 2Gi; the rest stay small.
+**Rationale**: Eight Node processes plus nginx on a 15 GiB, 8 vCPU node. The Carris feed is about
+77 MB compressed and 974 MB uncompressed, with an 807 MB `stop_times.txt`; the ingest unzips and
+parses it in memory. The first attempt OOMKilled at 512Mi and the second at 2Gi during validation, so
+`bus-catcher-rest` gets 8Gi and the bus PVC gets 10Gi. Total limits are about 10.6Gi, leaving room
+for Home Assistant, Flux, Tailscale, and k3s. The high bus limits are a one-off-ingest exception,
+not normal steady-state usage.
 
 **Alternatives considered**: no limits (unsafe on a single node) and very small limits (risk of
 OOMKill during Node startup). The values are validated during deployment and adjusted only with a
