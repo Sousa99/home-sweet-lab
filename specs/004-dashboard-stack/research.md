@@ -242,7 +242,7 @@ frontend deployment; a local `nginx -t` is optional and not guaranteed on the Ma
 ## R12. Fly-over and weather MCP Host-header workaround
 
 **Decision**: Run an nginx sidecar named `host-rewrite` in the `fly-over-tracker-mcp` and
-`weather-psychic-mcp` pods. The MCP process binds `127.0.0.1:3002`; nginx listens on `3001`, proxies
+`weather-psychic-mcp` pods. The MCP process listens on `0.0.0.0:3002`; nginx listens on `3001`, proxies
 to `127.0.0.1:3002`, sets `Host: localhost` and `Origin: http://localhost`, disables buffering, and
 keeps long SSE read/send timeouts. The public Service still exposes port `3001`.
 
@@ -256,8 +256,8 @@ keeps long SSE read/send timeouts. The public Service still exposes port `3001`.
 - Rewriting Host inside the pod keeps the consumer contract simple: the agent uses the same
   `<module>-mcp.dashboard.svc.cluster.local:3001/mcp` URLs for all four modules. It also strips or
   normalizes Origin for browser-originated requests.
-- The nginx sidecar is pinned by digest, uses small resource limits, and keeps the MCP process on
-  loopback inside the pod.
+- The nginx sidecar is pinned by digest, uses small resource limits, and keeps the MCP process off the public Service
+  surface; nginx reaches it over loopback inside the pod.
 
 **Alternatives considered**:
 

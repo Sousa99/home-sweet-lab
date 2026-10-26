@@ -17,7 +17,7 @@ storage are fixed by the published module images.
 | procrastinator-tracker | `ghcr.io/sousa99/procrastinator-tracker-backend:0.2.0` | `sh -c 'node dist/migrate.js && node dist/index.js --http'` | `sh -c 'node dist/migrate.js && node dist/index.js --mcp'` | 3000 | 3001 | `procrastinator-data` |
 | weather-psychic | `ghcr.io/sousa99/weather-psychic-backend:0.1.0` | `node dist/index.js --http` | `node dist/index.js --mcp` | 3000 | 3001 | none |
 
-The fly-over-tracker and weather-psychic MCP processes bind `127.0.0.1:3002` and run beside an nginx
+The fly-over-tracker and weather-psychic MCP processes listen on `0.0.0.0:3002` and run beside an nginx
 `host-rewrite` sidecar that listens on `3001`, proxies to `127.0.0.1:3002`, and sets
 `Host: localhost` plus `Origin: http://localhost`. Their published MCP helper rejects the Kubernetes
 Service DNS Host header. The Service still exposes 3001, so consumers use the same URL shape for all
@@ -29,7 +29,7 @@ Common environment:
 | -------- | ----- | ----- |
 | `HOST` | `0.0.0.0` | Set for fly-over and weather as in Compose; harmless for all. |
 | `PORT` | `3000` | REST listener. |
-| `MCP_PORT` | `3001` (bus/tasks), `3002` (fly/weather) | MCP listener. Fly/weather bind loopback and use the sidecar. |
+| `MCP_PORT` | `3001` (bus/tasks), `3002` (fly/weather) | MCP listener. Fly/weather use the sidecar for Host rewriting. |
 | `DB_PATH` | `/data/bus-catcher.db` | Bus only. |
 | `DATABASE_URL` | `/data/procrastinator.db` | Procrastinator only. |
 | `SNAPSHOT_CACHE_TTL_MS` | `60000` | Fly-over only. |

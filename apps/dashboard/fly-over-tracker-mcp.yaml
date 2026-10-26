@@ -41,7 +41,7 @@ spec:
             - --mcp
           env:
             - name: HOST
-              value: 127.0.0.1
+              value: 0.0.0.0
             - name: PORT
               value: "3000"
             - name: MCP_PORT

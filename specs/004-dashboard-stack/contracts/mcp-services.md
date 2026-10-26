@@ -22,9 +22,9 @@ The agent repository should use the cross-namespace form. The short form is for 
 | Module | MCP command | Required environment |
 | ------ | ----------- | -------------------- |
 | bus-catcher | `node dist/index.js --mcp` | `PORT=3000`, `MCP_PORT=3001`, `DB_PATH=/data/bus-catcher.db` |
-| fly-over-tracker | `node dist/index.js --mcp` | `HOST=127.0.0.1`, `PORT=3000`, `MCP_PORT=3002`; nginx `host-rewrite` sidecar on 3001 |
+| fly-over-tracker | `node dist/index.js --mcp` | `HOST=0.0.0.0`, `PORT=3000`, `MCP_PORT=3002`; nginx `host-rewrite` sidecar on 3001 |
 | procrastinator-tracker | `sh -c 'node dist/migrate.js && node dist/index.js --mcp'` | `PORT=3000`, `MCP_PORT=3001`, `DATABASE_URL=/data/procrastinator.db` |
-| weather-psychic | `node dist/index.js --mcp` | `HOST=127.0.0.1`, `PORT=3000`, `MCP_PORT=3002`; nginx `host-rewrite` sidecar on 3001 |
+| weather-psychic | `node dist/index.js --mcp` | `HOST=0.0.0.0`, `PORT=3000`, `MCP_PORT=3002`; nginx `host-rewrite` sidecar on 3001 |
 
 ## Transport contract
 
@@ -45,7 +45,7 @@ request whose Host header is a Kubernetes Service name, returning `Invalid Host:
 
 Each of those pods therefore runs an nginx `host-rewrite` sidecar:
 
-- The MCP process listens on `127.0.0.1:3002`.
+- The MCP process listens on `0.0.0.0:3002`.
 - nginx listens on `3001`, proxies to `127.0.0.1:3002`, sets `Host: localhost` and
   `Origin: http://localhost`, disables proxy buffering, and uses long SSE read/send timeouts.
 - The Service still targets the sidecar's `mcp-proxy` port 3001. Consumers do not need a custom Host
