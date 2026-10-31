@@ -61,7 +61,7 @@ spec:
               readOnly: true
       containers:
         - name: dashboard
-          image: ghcr.io/sousa99/home-sweet-home-dashboard:0.1.0
+          image: ghcr.io/sousa99/home-sweet-home-dashboard:0.1.1
           imagePullPolicy: IfNotPresent
           ports:
             - name: http

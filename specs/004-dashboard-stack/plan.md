@@ -28,7 +28,7 @@ published nginx dashboard image.
 
 **Primary Dependencies**: k3s, Flux Kustomizations and image pins, Traefik (not used by this app),
 Tailscale Kubernetes Operator, `local-path` storage, GHCR images:
-`home-sweet-home-dashboard:0.1.0`, `bus-catcher-backend:0.2.0`,
+`home-sweet-home-dashboard:0.1.1`, `bus-catcher-backend:0.2.0`,
 `fly-over-tracker-backend:0.5.0`, `procrastinator-tracker-backend:0.2.0`, and
 `weather-psychic-backend:0.1.0`. The pinned `python:3.12-alpine` digest from the host-metrics image
 is reused for config validation.

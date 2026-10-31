@@ -30,7 +30,7 @@ and `gitleaks` finds no secrets.
 If the dashboard package is still private, verify the failure and fix it before continuing:
 
 ```bash
-docker manifest inspect ghcr.io/sousa99/home-sweet-home-dashboard:0.1.0 >/dev/null && echo public
+docker manifest inspect ghcr.io/sousa99/home-sweet-home-dashboard:0.1.1 >/dev/null && echo public
 ```
 
 Supported fix: make the GHCR package public (GitHub → package settings → visibility). Fallback:

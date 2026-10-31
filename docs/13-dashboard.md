@@ -49,7 +49,7 @@ or MCP ingress, CORS configuration, or authentication in v1.
 
 | Component | Pin |
 | --------- | --- |
-| Dashboard frontend | `ghcr.io/sousa99/home-sweet-home-dashboard:0.1.0` |
+| Dashboard frontend | `ghcr.io/sousa99/home-sweet-home-dashboard:0.1.1` |
 | Bus backend | `ghcr.io/sousa99/bus-catcher-backend:0.2.0` |
 | Fly-over backend | `ghcr.io/sousa99/fly-over-tracker-backend:0.5.0` |
 | Procrastinator backend | `ghcr.io/sousa99/procrastinator-tracker-backend:0.2.0` |
@@ -67,7 +67,7 @@ GitHub → the `home-sweet-home-dashboard` package settings → change visibilit
 the other GHCR images and avoids a long-lived token. Verify from the Mac:
 
 ```bash
-docker manifest inspect ghcr.io/sousa99/home-sweet-home-dashboard:0.1.0 >/dev/null && echo public
+docker manifest inspect ghcr.io/sousa99/home-sweet-home-dashboard:0.1.1 >/dev/null && echo public
 ```
 
 ### Use a pull Secret (fallback)

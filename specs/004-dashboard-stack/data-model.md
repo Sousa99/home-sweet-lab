@@ -221,7 +221,7 @@ PVCs, then scaling back and reconciling. A restore drill is part of acceptance.
 
 | Component | Pin | Notes |
 | --------- | --- | ----- |
-| Dashboard frontend | `ghcr.io/sousa99/home-sweet-home-dashboard:0.1.0` | Make package public or use `ghcr-pull`. |
+| Dashboard frontend | `ghcr.io/sousa99/home-sweet-home-dashboard:0.1.1` | Make package public or use `ghcr-pull`. |
 | Bus backend | `ghcr.io/sousa99/bus-catcher-backend:0.2.0` | Components package `^0.2.0`. |
 | Fly-over backend | `ghcr.io/sousa99/fly-over-tracker-backend:0.5.0` | Components package `^0.5.0`. |
 | Procrastinator backend | `ghcr.io/sousa99/procrastinator-tracker-backend:0.2.0` | Components package `^0.2.0`. |

@@ -111,7 +111,7 @@ part of the Home Assistant state bundle.
 
 ### Dashboard GHCR pull credential (optional)
 
-The dashboard image (`ghcr.io/sousa99/home-sweet-home-dashboard:0.1.0`) was made public on
+The dashboard image (`ghcr.io/sousa99/home-sweet-home-dashboard:0.1.1`) was made public on
 2026-10-26, so no pull Secret is required. If it must become private later, create a `read:packages`
 token and a pull Secret:
 
