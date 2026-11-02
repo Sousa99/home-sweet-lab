@@ -12,10 +12,10 @@ storage are fixed by the published module images.
 
 | Module | Image tag | REST command | MCP command | REST port | MCP port | Storage |
 | ------ | --------- | ------------ | ----------- | --------- | -------- | ------- |
-| bus-catcher | `ghcr.io/sousa99/bus-catcher-backend:0.2.0` | `node dist/index.js --http` | `node dist/index.js --mcp` | 3000 | 3001 | `bus-catcher-data` |
-| fly-over-tracker | `ghcr.io/sousa99/fly-over-tracker-backend:0.5.0` | `node dist/index.js --http` | `node dist/index.js --mcp` | 3000 | 3001 | none |
-| procrastinator-tracker | `ghcr.io/sousa99/procrastinator-tracker-backend:0.2.0` | `sh -c 'node dist/migrate.js && node dist/index.js --http'` | `sh -c 'node dist/migrate.js && node dist/index.js --mcp'` | 3000 | 3001 | `procrastinator-data` |
-| weather-psychic | `ghcr.io/sousa99/weather-psychic-backend:0.1.0` | `node dist/index.js --http` | `node dist/index.js --mcp` | 3000 | 3001 | none |
+| bus-catcher | `ghcr.io/sousa99/bus-catcher-backend:0.3.0` | `node dist/index.js --http` | `node dist/index.js --mcp` | 3000 | 3001 | `bus-catcher-data` |
+| fly-over-tracker | `ghcr.io/sousa99/fly-over-tracker-backend:0.6.0` | `node dist/index.js --http` | `node dist/index.js --mcp` | 3000 | 3001 | none |
+| procrastinator-tracker | `ghcr.io/sousa99/procrastinator-tracker-backend:0.3.0` | `sh -c 'node dist/migrate.js && node dist/index.js --http'` | `sh -c 'node dist/migrate.js && node dist/index.js --mcp'` | 3000 | 3001 | `procrastinator-data` |
+| weather-psychic | `ghcr.io/sousa99/weather-psychic-backend:0.2.0` | `node dist/index.js --http` | `node dist/index.js --mcp` | 3000 | 3001 | none |
 
 The fly-over-tracker and weather-psychic MCP processes listen on `0.0.0.0:3002` and run beside an nginx
 `host-rewrite` sidecar that listens on `3001`, proxies to `127.0.0.1:3002`, and sets
@@ -221,11 +221,11 @@ PVCs, then scaling back and reconciling. A restore drill is part of acceptance.
 
 | Component | Pin | Notes |
 | --------- | --- | ----- |
-| Dashboard frontend | `ghcr.io/sousa99/home-sweet-home-dashboard:0.1.1` | Make package public or use `ghcr-pull`. |
-| Bus backend | `ghcr.io/sousa99/bus-catcher-backend:0.2.0` | Components package `^0.2.0`. |
-| Fly-over backend | `ghcr.io/sousa99/fly-over-tracker-backend:0.5.0` | Components package `^0.5.0`. |
-| Procrastinator backend | `ghcr.io/sousa99/procrastinator-tracker-backend:0.2.0` | Components package `^0.2.0`. |
-| Weather backend | `ghcr.io/sousa99/weather-psychic-backend:0.1.0` | Components package `^0.1.0`. |
+| Dashboard frontend | `ghcr.io/sousa99/home-sweet-home-dashboard:0.2.0` | Make package public or use `ghcr-pull`. |
+| Bus backend | `ghcr.io/sousa99/bus-catcher-backend:0.3.0` | Components package `^0.3.0`. |
+| Fly-over backend | `ghcr.io/sousa99/fly-over-tracker-backend:0.6.0` | Components package `^0.6.0`. |
+| Procrastinator backend | `ghcr.io/sousa99/procrastinator-tracker-backend:0.3.0` | Components package `^0.3.0`. |
+| Weather backend | `ghcr.io/sousa99/weather-psychic-backend:0.2.0` | Components package `^0.2.0`. |
 | Config validator | `python:3.12-alpine@sha256:b658b05ce9c4eb97ec6fc19424818a1f31993659c2b505a532f470e83807815d` | Reused from the host-metrics image. |
 | MCP host rewrite | `nginx:1.27-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10` | Sidecar for fly-over and weather MCP only. |
 

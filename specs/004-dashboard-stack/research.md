@@ -137,7 +137,7 @@ REST Services and MCP Services remain ClusterIP. Local debugging uses `kubectl p
 
 ## R6. Image availability and pins
 
-**Decision**: Pin the dashboard to `ghcr.io/sousa99/home-sweet-home-dashboard:0.1.1` and the module
+**Decision**: Pin the dashboard to `ghcr.io/sousa99/home-sweet-home-dashboard:0.2.0` and the module
 backends to `0.2.0`, `0.5.0`, `0.2.0`, and `0.1.0`. Resolve the dashboard package visibility by
 making it public; if that is not possible, create a `ghcr-pull` Secret and add
 `imagePullSecrets: [{name: ghcr-pull}]` to the frontend Deployment. No Flux image automation is

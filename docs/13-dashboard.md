@@ -49,11 +49,11 @@ or MCP ingress, CORS configuration, or authentication in v1.
 
 | Component | Pin |
 | --------- | --- |
-| Dashboard frontend | `ghcr.io/sousa99/home-sweet-home-dashboard:0.1.1` |
-| Bus backend | `ghcr.io/sousa99/bus-catcher-backend:0.2.0` |
-| Fly-over backend | `ghcr.io/sousa99/fly-over-tracker-backend:0.5.0` |
-| Procrastinator backend | `ghcr.io/sousa99/procrastinator-tracker-backend:0.2.0` |
-| Weather backend | `ghcr.io/sousa99/weather-psychic-backend:0.1.0` |
+| Dashboard frontend | `ghcr.io/sousa99/home-sweet-home-dashboard:0.2.0` |
+| Bus backend | `ghcr.io/sousa99/bus-catcher-backend:0.3.0` |
+| Fly-over backend | `ghcr.io/sousa99/fly-over-tracker-backend:0.6.0` |
+| Procrastinator backend | `ghcr.io/sousa99/procrastinator-tracker-backend:0.3.0` |
+| Weather backend | `ghcr.io/sousa99/weather-psychic-backend:0.2.0` |
 | Config validator | `python:3.12-alpine@sha256:b658b05ce9c4eb97ec6fc19424818a1f31993659c2b505a532f470e83807815d` |
 | MCP host rewrite | `nginx:1.27-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10` |
 
@@ -67,7 +67,7 @@ GitHub → the `home-sweet-home-dashboard` package settings → change visibilit
 the other GHCR images and avoids a long-lived token. Verify from the Mac:
 
 ```bash
-docker manifest inspect ghcr.io/sousa99/home-sweet-home-dashboard:0.1.1 >/dev/null && echo public
+docker manifest inspect ghcr.io/sousa99/home-sweet-home-dashboard:0.2.0 >/dev/null && echo public
 ```
 
 ### Use a pull Secret (fallback)
@@ -240,7 +240,13 @@ kubectl -n dashboard delete pod \
 
 ## Updates and rollback
 
-Update one module at a time:
+The current release is dashboard `0.2.0`, paired with bus-catcher `0.3.0`, fly-over-tracker
+`0.6.0`, procrastinator-tracker `0.3.0`, and weather-psychic `0.2.0`. Update those pins together for
+this release; a `0.2.0` dashboard with the older backend images can render but may call APIs the old
+backends do not provide. The `0.2.0` image also adds optional `flights.tileLayers` and `layout`
+settings; absent values use the image defaults.
+
+Update one module at a time after the baseline is on matching versions:
 
 1. Change its backend image pin in `apps/dashboard/<module>-rest.yaml` and
    `apps/dashboard/<module>-mcp.yaml`.

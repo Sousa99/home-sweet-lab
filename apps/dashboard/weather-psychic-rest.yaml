@@ -33,7 +33,7 @@ spec:
         kubernetes.io/arch: amd64
       containers:
         - name: rest
-          image: ghcr.io/sousa99/weather-psychic-backend:0.1.0
+          image: ghcr.io/sousa99/weather-psychic-backend:0.2.0
           imagePullPolicy: IfNotPresent
           command:
             - node
