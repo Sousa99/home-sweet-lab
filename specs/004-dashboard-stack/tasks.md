@@ -136,7 +136,7 @@ manual manifest edits.
 - [X] T039 [P] [US3] Update `docs/09-limitations.md` with dashboard-specific limitations: Tailscale-only access, no REST/MCP external exposure, single node and local-path data, image visibility, module version skew, MCP single-session, config restart, and no automated offsite backup.
 - [X] T040 [US3] Add recovery, update, rollback, and version-pin sections to `docs/13-dashboard.md`: pod loss, config failure, image-pull failure, provider outage, Service recreation, node reboot, per-module pin update, and Git revert rollback.
 - [X] T041 [US3] Run the recovery drills in `specs/004-dashboard-stack/quickstart.md` section 8 for pod deletion, missing/invalid config, image-pull failure, external provider outage, and Service recreation; record results in `docs/13-dashboard.md`.
-- [ ] T042 [US3] Run the node-reboot drill: reboot `dietpi`, wait for k3s and Flux, verify all nine Deployments, both PVCs, the dashboard URL, all four MCP URLs, and bus/task data; record the result in `docs/13-dashboard.md`.
+- [X] T042 [US3] Run the node-reboot drill: reboot `dietpi`, wait for k3s and Flux, verify all nine Deployments, both PVCs, the dashboard URL, all four MCP URLs, and bus/task data; record the result in `docs/13-dashboard.md`.
 - [X] T043 [US3] Update `README.md` status, architecture table, access section, repository map, and non-goals to include the dashboard stack and its frontend/REST/MCP split.
 - [X] T044 [P] [US3] Update `docs/README.md` with the `13-dashboard.md` status and index entry, and link the dashboard runbook from the relevant secret/backup/limitations documents.
 
@@ -150,7 +150,7 @@ manual manifest edits.
 
 - [X] T045 Review every `apps/dashboard/*.yaml` manifest for pinned images, correct component selectors, `Recreate` on stateful modules, resource limits, no external REST/MCP exposure, no service-account token, and least-privilege security contexts; fix issues in the affected manifests.
 - [X] T046 Run `./scripts/validate.sh` from the repository root; confirm Kustomize render, `kubeconform`, `yamllint`, the dashboard validator tests, and `gitleaks` all pass.
-- [ ] T047 Run `specs/004-dashboard-stack/quickstart.md` end-to-end on the real cluster, including the final acceptance checklist; record any deviation and fix the runbook or manifests.
+- [X] T047 Run `specs/004-dashboard-stack/quickstart.md` end-to-end on the real cluster, including the final acceptance checklist; record any deviation and fix the runbook or manifests.
 - [X] T048 [P] Scan Git for real tailnet identifiers, household coordinates, stop IDs, credentials, SQLite files, and backup archives; confirm `.gitignore` covers `backups/`, `bundles/`, and `secrets/`, and that `apps/dashboard/config.example.json` contains only placeholders.
 - [X] T049 [P] Verify `specs/004-dashboard-stack/spec.md` and `specs/004-dashboard-stack/plan.md` are consistent with `docs/13-dashboard.md`: nine Deployments, nine Services, two PVCs, one Tailscale Ingress, no image automation, no direct REST/MCP ingress, and all functional requirements covered by tasks or documentation.
 
@@ -160,8 +160,9 @@ manual manifest edits.
 
 Completed locally: T001–T016, T023–T028, T033–T035, T037–T040, T043–T046, T048–T049.
 
-Remaining: T042 (node reboot) and T047 (end-to-end quickstart). T017, T019, T021, T022, and T041
-are complete; the package is public, the frontend is live, and the failure drills passed.
+All tasks complete. The node reboot and end-to-end quickstart passed on 2026-11-02. Known follow-up:
+the `bus-catcher` `0.3.0` GTFS refresh OOMKilled at the 10 GiB limit, so the bus schedule remains
+stale until a maintenance-window refresh with more memory or an out-of-cluster ingest.
 
 The repository artifacts pass `./scripts/validate.sh`, `kubectl apply --dry-run=server`, nginx
 configuration syntax validation, and the Python validator tests. The app was reconciled by Flux;

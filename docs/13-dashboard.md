@@ -1,9 +1,13 @@
 # 13 — Dashboard stack
 
-Status: Flux reconciled all nine workloads and both PVCs on 2026-10-26. The frontend is live at
-`https://dashboard.<tailnet>.ts.net/`, all four REST proxy routes and all four cross-namespace MCP
-initialize calls pass, bus/task data consistency passes, and the backup/restore and failure drills
-passed. The node-reboot drill remains a maintenance-window task.
+Status: Flux reconciled dashboard `0.2.0` and the paired backend pins (bus-catcher `0.3.0`,
+fly-over-tracker `0.6.0`, procrastinator-tracker `0.3.0`, weather-psychic `0.2.0`) on 2026-11-02.
+All nine workloads and both PVCs are Ready; the frontend, four REST proxy routes, four MCP
+initialize calls, data persistence, backup/restore, and node-reboot recovery pass.
+
+Known issue: the bus GTFS refresh with `bus-catcher` `0.3.0` was OOMKilled at the 10 GiB limit. The
+existing bus database remains served but is stale (last refresh 2026-10-26); the bus block will be
+empty until a maintenance-window refresh with a higher memory limit or an out-of-cluster ingest.
 
 ## What runs
 
