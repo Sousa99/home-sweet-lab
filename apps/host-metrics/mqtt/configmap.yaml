@@ -20,6 +20,7 @@ data:
     topic write homeassistant/sensor/home_sweet_lab_server_ram_usage/config
     topic write homeassistant/sensor/home_sweet_lab_server_storage_usage/config
     topic write homeassistant/sensor/home_sweet_lab_server_battery_status/config
+    topic write homeassistant/sensor/home_sweet_lab_server_battery_level/config
     topic write homeassistant/sensor/home_sweet_lab_server_tailscale_ipv4/config
     topic write homeassistant/sensor/home_sweet_lab_server_ipv4_addresses/config
     topic write home-sweet-lab-server/state
@@ -32,6 +33,7 @@ data:
     topic read homeassistant/sensor/home_sweet_lab_server_ram_usage/config
     topic read homeassistant/sensor/home_sweet_lab_server_storage_usage/config
     topic read homeassistant/sensor/home_sweet_lab_server_battery_status/config
+    topic read homeassistant/sensor/home_sweet_lab_server_battery_level/config
     topic read homeassistant/sensor/home_sweet_lab_server_tailscale_ipv4/config
     topic read homeassistant/sensor/home_sweet_lab_server_ipv4_addresses/config
     topic read home-sweet-lab-server/state

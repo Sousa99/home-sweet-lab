@@ -1,7 +1,7 @@
 # 12 — MQTT host metrics device
 
 This document owns the MQTT path for the DietPi host metrics. It creates **one Home Assistant
-device** named `home-sweet-lab-server` with six entities, replacing the legacy Scrape integration.
+device** named `home-sweet-lab-server` with seven entities, replacing the legacy Scrape integration.
 
 - **home-sweet-lab-server** is the Home Assistant device name.
 - **DietPi** is the operating system.
@@ -53,7 +53,9 @@ Traefik, Tailscale, a LoadBalancer, a NodePort, or a host port.
 
 Still pending: the manual Home Assistant MQTT integration, the Secret-failure drill, and the
 node-reboot drill. No legacy Scrape integration is currently configured, so no Scrape cleanup is
-needed.
+needed. The battery-level entity and ACL addition from
+[`../specs/005-battery-level/`](../specs/005-battery-level/) are implemented but not yet deployed
+and verified on the cluster.
 
 ## 1. Create the MQTT Secret
 
@@ -141,7 +143,7 @@ the password printed by the Secret script.
 ```bash
 kubectl -n monitoring exec deploy/mosquitto -- \
   mosquitto_sub -h localhost -u homeassistant -P '<password>' \
-  -t 'homeassistant/sensor/#' -C 6 -W 10 -v
+  -t 'homeassistant/sensor/#' -C 7 -W 10 -v
 ```
 
 ```bash
@@ -152,14 +154,17 @@ kubectl -n monitoring exec deploy/mosquitto -- \
 
 Expected:
 
-- six retained discovery messages;
+- seven retained discovery messages;
 - every discovery payload has `device.identifiers = ["home-sweet-lab-server"]`;
 - a retained state message with `temperature_c`, `memory_usage_percent`,
-  `storage_usage_percent`, `battery_status`, `tailscale_ipv4`, and `ipv4_addresses`;
+  `storage_usage_percent`, `battery_status`, `battery_level_percent`, `tailscale_ipv4`, and
+  `ipv4_addresses`;
 - availability topics `online`.
 
 The exact topics and entity IDs are in
 [`../specs/003-host-metrics-mqtt-device/contracts/mqtt-discovery.md`](../specs/003-host-metrics-mqtt-device/contracts/mqtt-discovery.md).
+The battery-level addition is specified in
+[`../specs/005-battery-level/contracts/battery-level-additions.md`](../specs/005-battery-level/contracts/battery-level-additions.md).
 
 ## 4. Add the Home Assistant MQTT integration
 
@@ -193,19 +198,22 @@ Home Assistant connects, receives the retained discovery messages, and creates t
 | `sensor.home_sweet_lab_server_ram_usage` | RAM percentage, 0–100 |
 | `sensor.home_sweet_lab_server_storage_usage` | Root filesystem percentage, 0–100 |
 | `sensor.home_sweet_lab_server_battery_status` | Raw state such as `Charging`, `Discharging`, `Full`, `Not charging`, or `Unknown` |
+| `sensor.home_sweet_lab_server_battery_level` | Battery charge percentage, 0–100 |
 | `sensor.home_sweet_lab_server_tailscale_ipv4` | Dotted-quad Tailscale address |
 | `sensor.home_sweet_lab_server_ipv4_addresses` | Comma-separated active IPv4 addresses |
 
 Values update every 30 seconds by default. If they do not update, check the exporter logs and the
 MQTT integration logs.
 
-The current host reports `BAT0` as `Full`, so the battery entity should show `Full` until the
-battery starts charging or discharging.
+The current host reports `BAT0` as `Full`, so the battery-status entity should show `Full` until the
+battery starts charging or discharging. The battery-level entity should show the matching
+`capacity` percentage; if the host does not expose `capacity`, that entity has no value while the
+status entity keeps working.
 
 ## 6. Remove the legacy Scrape integration
 
 No Scrape integration is currently configured, so skip this section. If one is added later, remove
-it only after the MQTT device and all six entities are verified.
+it only after the MQTT device and all seven entities are verified.
 
 1. Open **Settings > Devices & services**.
 2. Find the **Scrape** integration used for the old DietPi sensors.
@@ -269,7 +277,8 @@ Home Assistant recovers without recreating the device or entities.
 
 Only the affected per-source availability topic goes `offline`; the other entities stay available.
 The state payload uses `null`/empty values for the missing source. Do not replace missing data with
-zero.
+zero. A battery can report status but not level; in that case the battery status entity stays
+available and only the battery-level entity has no value.
 
 ### Authentication or ACL failure
 
@@ -312,7 +321,7 @@ If the exporter pod is in `ImagePullBackOff`:
 
 - No MQTT TLS or external MQTT access.
 - No broker persistence/PVC; retained messages are ephemeral.
-- No battery percentage, health, runtime, or NUT/UPS integration.
+- No battery health, cycle count, runtime, or NUT/UPS integration.
 - No Prometheus, Grafana, alerting, or long-term metric storage.
 - No per-container, per-pod, or application metrics.
 - No IPv6 address reporting.
@@ -324,5 +333,6 @@ If the exporter pod is in `ImagePullBackOff`:
 
 - [`../specs/003-host-metrics-mqtt-device/contracts/mqtt-discovery.md`](../specs/003-host-metrics-mqtt-device/contracts/mqtt-discovery.md) — topics, entities, ACLs
 - [`../specs/003-host-metrics-mqtt-device/spec.md`](../specs/003-host-metrics-mqtt-device/spec.md) — requirements
+- [`../specs/005-battery-level/contracts/battery-level-additions.md`](../specs/005-battery-level/contracts/battery-level-additions.md) — battery-level entity and ACL addition
 - [`11-host-metrics.md`](11-host-metrics.md) — HTTP exporter and legacy Scrape path
 - [`09-limitations.md`](09-limitations.md) — cluster-wide limitations
