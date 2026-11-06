@@ -43,6 +43,12 @@ else
     echo "python3 not found; skipping Python tests" >&2
 fi
 
+echo "Running pull-backups tests"
+"$repo_root/scripts/tests/test-pull-backups.sh"
+
+echo "Running kubectl-copy tests"
+"$repo_root/scripts/tests/test-kubectl-copy.sh"
+
 if command -v gitleaks >/dev/null 2>&1; then
     echo "Scanning for secrets"
     gitleaks detect --source "$repo_root" --no-banner --redact

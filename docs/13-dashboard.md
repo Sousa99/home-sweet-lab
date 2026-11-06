@@ -273,8 +273,10 @@ sha256sum -c ~/backups/home-sweet-lab/dashboard/<timestamp>/SHA256SUMS
 ```
 
 The script suspends the `apps` Flux Kustomization, scales the four stateful module Deployments to
-zero, runs a temporary pinned Python helper pod, archives both PVCs with SHA-256, copies the archive
-to the Mac, scales back, and resumes Flux. A trap restores Flux and replicas if the script fails.
+zero, runs a temporary pinned Python helper pod, archives both PVCs with SHA-256, downloads the
+archive in 1 MiB chunks with retries, scales back, and resumes Flux. A trap restores Flux and
+replicas if the script fails. Use `--retries`, `--chunk-size`, or `DASHBOARD_BACKUP_CHUNK_SIZE` to
+tune the transfer.
 
 Restore:
 

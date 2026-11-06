@@ -38,7 +38,22 @@ cd ~/Desktop/code/home-sweet-lab
 
 The default destination is `~/backups/home-sweet-lab/<timestamp>`. Override it with `--dest DIR`.
 The script uses the running Home Assistant pod, or creates a temporary helper pod if Home Assistant is
-stopped. It writes `SHA256SUMS` and verifies every file.
+stopped. It copies each backup in 512 KiB chunks, retries failed chunks (`--retries`, default 5), and
+verifies every file against the SHA-256 computed inside the pod. A failed pull leaves no partial files
+in the destination. Use `HASS_PULL_CHUNK_SIZE` to change the chunk size.
+
+Bulk `kubectl cp`/exec streams can be reset on a slow or relayed Tailscale path. If a pull fails with
+`websocket: close 1006` or `connection reset by peer`, check the path before blaming the backup:
+
+```bash
+tailscale ping <dietpi-tailscale-ip>   # should report a direct connection, not "via DERP"
+tailscale netcheck                     # look for symmetric NAT / high DERP latency
+```
+
+Prefer the home LAN or a direct tailnet connection for bulk pulls. The chunked retry loop makes the
+script usable on a degraded link, but a direct connection is faster and less likely to fail. The same
+transport affects the other bulk-copy scripts (`pull-dashboard-data.sh`,
+`upload-state-bundle.sh`, and `pull-config.sh`); they use the same chunked retry helper.
 
 On 2026-10-25 the drill pulled five files and all checksums matched:
 
@@ -84,6 +99,10 @@ sha256sum -c ~/backups/home-sweet-lab/dashboard/<timestamp>/SHA256SUMS
 Deployments to zero, runs a temporary pinned Python helper pod to archive both PVCs with SHA-256,
 copies the archive to the Mac, scales back, and resumes Flux. A trap restores Flux and replicas on
 failure. The frontend stays up but the bus/task blocks are unavailable during the window.
+
+The archive is downloaded in 1 MiB chunks with retries and verified against the in-pod SHA-256; use
+`--retries`, `--chunk-size`, or `DASHBOARD_BACKUP_CHUNK_SIZE` to tune the transfer. Larger chunks
+shorten the maintenance window but are more likely to be reset on a degraded tailnet path.
 
 The archive contains `bus-catcher/bus-catcher.db` and
 `procrastinator/procrastinator.db` under `dashboard-data.tar.gz`, plus `SHA256SUMS`.
@@ -191,6 +210,7 @@ contains the desired state.
 | Corrupt bundle checksum | Passed: restore exited non-zero and left the archive in place |
 | Archive with `../` path traversal | Passed after hardening: restore refused the archive before extraction |
 | Pull backups and verify checksums | Passed: five files pulled; every SHA-256 matched |
+| Pull backups over a DERP-relayed link after the chunked-copy fix | Passed 2026-11-06: four files pulled; every SHA-256 matched |
 | Image automation | Passed: Flux selected and deployed the published tag |
 | Tailscale Ingress and TLS certificate | Passed: the operator created the proxy, MagicDNS name, and certificate; HTTPS returned `200` |
 | Full PVC loss and restore | Not executed: destructive, requires a maintenance window |
