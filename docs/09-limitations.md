@@ -96,14 +96,16 @@ These are deliberate v1 boundaries. They are documented so they are not mistaken
 - The exporter is visibility only. It is not an availability monitor, an alerting system, or a
   long-term metrics store.
 - The primary Home Assistant path is MQTT discovery, producing one `home-sweet-lab-server` device
-  with six entities. The legacy Scrape path polls every 10 minutes; the MQTT path publishes every
+  with seven entities. The legacy Scrape path polls every 10 minutes; the MQTT path publishes every
   30 seconds. See [`12-host-metrics-mqtt.md`](12-host-metrics-mqtt.md).
 - The host may have no battery or no usable temperature sensor. In that case the corresponding
   per-source availability topic goes offline, the entity is unavailable, and the other entities
   continue to work. The exporter does not fabricate a value.
 - Battery status is the raw Linux `power_supply` state (`Charging`, `Discharging`, `Full`, `Not
-  charging`, or `Unknown`). Battery percentage, health, runtime, and NUT/UPS integration are out of
-  scope.
+  charging`, or `Unknown`). Battery level is the kernel `capacity` percentage, constrained to
+  0–100. A battery that exposes status but not capacity keeps its status entity and leaves the
+  level entity without a value. Battery health, cycle count, runtime, and NUT/UPS integration are
+  out of scope.
 - The exporter reads `/proc/meminfo`, `/proc/1/net`, `/sys`, and `/` through read-only hostPath
   mounts. The host `/` mount is the broadest exposure; it exists only for `statvfs("/")`. The
   container runs as UID/GID 65534 with all capabilities dropped and no privileged mode.

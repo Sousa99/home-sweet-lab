@@ -17,10 +17,14 @@ class DiscoveryTests(unittest.TestCase):
 
     def test_discovery_messages_share_one_device(self) -> None:
         messages = discovery.discovery_messages()
-        self.assertEqual(len(messages), 6)
+        self.assertEqual(len(messages), 7)
         topics = {topic for topic, _ in messages}
         self.assertIn(
             "homeassistant/sensor/home_sweet_lab_server_cpu_temperature/config",
+            topics,
+        )
+        self.assertIn(
+            "homeassistant/sensor/home_sweet_lab_server_battery_level/config",
             topics,
         )
         for _, payload in messages:
@@ -49,6 +53,34 @@ class DiscoveryTests(unittest.TestCase):
                 },
                 {
                     "topic": "home-sweet-lab-server/availability/temperature",
+                    "payload_available": "online",
+                    "payload_not_available": "offline",
+                },
+            ],
+        )
+
+    def test_battery_level_discovery(self) -> None:
+        payload = discovery.discovery_payload(
+            next(sensor for sensor in discovery.SENSORS if sensor["key"] == "battery_level")
+        )
+        self.assertEqual(payload["name"], "Battery level")
+        self.assertEqual(payload["default_entity_id"], "sensor.home_sweet_lab_server_battery_level")
+        self.assertEqual(payload["unique_id"], "home_sweet_lab_server_battery_level")
+        self.assertEqual(payload["value_template"], "{{ value_json.battery_level_percent }}")
+        self.assertEqual(payload["unit_of_measurement"], "%")
+        self.assertEqual(payload["device_class"], "battery")
+        self.assertEqual(payload["state_class"], "measurement")
+        self.assertEqual(payload["icon"], "mdi:battery")
+        self.assertEqual(
+            payload["availability"],
+            [
+                {
+                    "topic": "home-sweet-lab-server/availability",
+                    "payload_available": "online",
+                    "payload_not_available": "offline",
+                },
+                {
+                    "topic": "home-sweet-lab-server/availability/battery",
                     "payload_available": "online",
                     "payload_not_available": "offline",
                 },
@@ -127,7 +159,7 @@ class PublisherTests(unittest.TestCase):
     def test_publish_discovery_and_state(self) -> None:
         publisher, client = self.make_publisher()
         publisher.publish_discovery()
-        self.assertEqual(len(client.messages), 6)
+        self.assertEqual(len(client.messages), 7)
         self.assertTrue(all(retain and qos == 1 for _, _, qos, retain in client.messages))
         publisher.publish_state()
         topics = {topic for topic, _, _, _ in client.messages}
@@ -136,6 +168,14 @@ class PublisherTests(unittest.TestCase):
         self.assertIn("home-sweet-lab-server/availability/temperature", topics)
         self.assertIn("home-sweet-lab-server/availability/battery", topics)
         self.assertIn("home-sweet-lab-server/availability/ipv4", topics)
+
+    def test_battery_availability_ignores_missing_level(self) -> None:
+        publisher, client = self.make_publisher(
+            state=snapshot(batteries=(SimpleNamespace(level_percent=None),))
+        )
+        publisher.publish_state()
+        messages = {topic: payload for topic, payload, _, _ in client.messages}
+        self.assertEqual(messages["home-sweet-lab-server/availability/battery"], "online")
 
     def test_publish_state_marks_absent_sources_offline(self) -> None:
         publisher, client = self.make_publisher(state=snapshot(temperatures=(), batteries=(), ipv4=()))

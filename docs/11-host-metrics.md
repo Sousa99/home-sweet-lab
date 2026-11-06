@@ -21,6 +21,7 @@ the host through read-only mounts and exposes:
 | RAM usage | `/proc/meminfo` | `sensor.dietpi_ram_usage` |
 | Root filesystem usage | `statvfs("/")` | `sensor.dietpi_storage_usage` |
 | Battery charging status | `/sys/class/power_supply/*/status` | `sensor.dietpi_battery_status` |
+| Battery charge level | `/sys/class/power_supply/*/capacity` | `sensor.dietpi_battery_level` |
 | Tailscale IPv4 | host network namespace | `sensor.dietpi_tailscale_ipv4` |
 | All active IPv4 addresses (optional) | host network namespace | `sensor.dietpi_ipv4_addresses` |
 
@@ -88,17 +89,22 @@ All filesystem series carry `mountpoint="/"`.
 `tailscale` is `"true"` only for `interface="tailscale0"`. Use the Tailscale sensor for the stable
 address; use the optional all-IPv4 sensor to see LAN and virtual interfaces.
 
-### Battery status
+### Battery status and level
 
 | Metric | Labels | Unit | Notes |
 | ------ | ------ | ---- | ----- |
 | `host_battery_status_info` | `device`, `status`, `path` | 1 (info metric) | One series per readable battery. |
+| `host_battery_level_percent` | `device`, `path` | percent (0–100) | One series per battery with a readable level. |
 | `host_metrics_battery_available` | none | 0 or 1 | `0` when no readable battery exists. |
 
 `status` is the raw kernel string: `Charging`, `Discharging`, `Full`, `Not charging`, or `Unknown`.
 The exporter does not map `Full` or `Not charging` to a binary charging/discharging value. If
 multiple batteries exist, all are exposed; the lexicographically first device (for example `BAT0`)
-is the preferred battery used by the single Home Assistant sensor.
+is the preferred battery used by the single Home Assistant battery-status sensor.
+
+`host_battery_level_percent` comes from `capacity`, is constrained to `0–100`, and is omitted for a
+battery whose level is missing, unreadable, or non-numeric. A real `0%` is reported as `0`. The
+preferred battery drives the single Home Assistant battery-level sensor.
 
 ### Exporter identity
 
@@ -108,8 +114,11 @@ is the preferred battery used by the single Home Assistant sensor.
 
 - No temperature sensor: temperature series omitted, `host_metrics_temperature_available 0`, and
   `temperature_c` is `null`.
-- No battery: battery series omitted, `host_metrics_battery_available 0`, and `battery_status` is
-  `null`.
+- No battery: battery series omitted, `host_metrics_battery_available 0`, and `battery_status` and
+  `battery_level_percent` are `null`.
+- Battery status readable but level unreadable: `host_battery_status_info` is present, no
+  `host_battery_level_percent` series is emitted for that device, and `battery_level_percent` is
+  `null` while `battery_status` remains populated.
 - Memory or root filesystem unreadable: those families are omitted, `/readyz` returns `503`, and
   the pod does not become Ready.
 - Host network source unreadable: IPv4 series omitted; memory, storage, temperature, and battery
@@ -136,9 +145,10 @@ storage_usage_percent
 ipv4_addresses[]   (interface, address, tailscale, netmask?)
 tailscale_ipv4
 battery_status
+battery_level_percent
 battery_device
 battery_path
-battery_statuses[] (device, status, path, preferred)
+battery_statuses[] (device, status, level_percent, path, preferred)
 ```
 
 ## Legacy Home Assistant Scrape UI steps
@@ -163,6 +173,7 @@ configuration-repository change.
 | DietPi RAM usage | `{{ value_json.memory_usage_percent }}` | `{{ value_json.memory_usage_percent is not none }}` | % | none | Measurement |
 | DietPi storage usage | `{{ value_json.storage_usage_percent }}` | `{{ value_json.storage_usage_percent is not none }}` | % | none | Measurement |
 | DietPi battery status | `{{ value_json.battery_status }}` | `{{ value_json.battery_status is not none }}` | none | none | none |
+| DietPi battery level | `{{ value_json.battery_level_percent }}` | `{{ value_json.battery_level_percent is not none }}` | % | Battery | Measurement |
 | DietPi Tailscale IPv4 | `{{ value_json.tailscale_ipv4 }}` | `{{ value_json.tailscale_ipv4 is not none }}` | none | none | none |
 | DietPi IPv4 addresses (optional) | `{{ value_json.ipv4_addresses \| map(attribute='address') \| join(', ') }}` | `{{ value_json.ipv4_addresses \| length > 0 }}` | none | none | none |
 
@@ -181,6 +192,7 @@ runtime IP addresses or other household data; use the entity ID and a general st
 | RAM usage |  |  |  |
 | Storage usage |  |  |  |
 | Battery status |  |  |  |
+| Battery level |  |  |  |
 | Tailscale IPv4 |  |  |  |
 | All IPv4 (optional) |  |  |  |
 
@@ -215,7 +227,8 @@ Expected:
 - The `monitoring` namespace exists, the ConfigMap has a hash suffix, the Deployment has one
   available replica, and the pod is Ready on `dietpi`.
 - `/metrics` returns HTTP 200 with the available families.
-- `/ha` returns the documented keys, with `battery_status` null if the host has no battery.
+- `/ha` returns the documented keys, with `battery_status` and `battery_level_percent` null if the
+  host has no battery.
 - `/readyz` returns `200` when memory and root filesystem collection succeed.
 
 ### Exposure check
@@ -238,12 +251,15 @@ Do not expose the exporter through Traefik, Tailscale, a NodePort, a LoadBalance
 ls /sys/class/power_supply
 cat /sys/class/power_supply/<device>/type
 cat /sys/class/power_supply/<device>/status
+cat /sys/class/power_supply/<device>/capacity
 ```
 
 Run those on the host. A `Battery` device with a readable `status` produces
-`host_battery_status_info` and a non-null `battery_status`. If there is no battery, the expected
-state is an absent battery family with `host_metrics_battery_available 0`; the Home Assistant
-battery sensor is unavailable by design.
+`host_battery_status_info` and a non-null `battery_status`. A readable `capacity` also produces
+`host_battery_level_percent` and a non-null `battery_level_percent`. If there is no battery, the
+expected state is an absent battery family with `host_metrics_battery_available 0`; the Home
+Assistant battery sensors are unavailable by design. If `capacity` is missing or unreadable, the
+status sensor still works and the level sensor has no value.
 
 ## Recovery and failure behavior
 
@@ -295,13 +311,18 @@ The exporter remains Ready. `/metrics` omits `host_system_temperature_celsius` a
 `host_metrics_temperature_available 0`; `/ha` reports `temperature_c: null`; the Home Assistant
 temperature sensor becomes unavailable. Do not replace the value with zero.
 
-### No battery or unreadable battery status
+### No battery or unreadable battery status/level
 
-The exporter remains Ready. `/metrics` omits `host_battery_status_info` and reports
-`host_metrics_battery_available 0`; `/ha` reports `battery_status: null` and an empty
-`battery_statuses`; the Home Assistant battery status sensor becomes unavailable. A battery that is
-removed at runtime disappears on the next scrape. Do not add NUT/UPS, USB access, or a privileged
-helper just to make the sensor available.
+The exporter remains Ready. `/metrics` omits `host_battery_status_info` and
+`host_battery_level_percent` and reports `host_metrics_battery_available 0`; `/ha` reports
+`battery_status: null`, `battery_level_percent: null`, and an empty `battery_statuses`; both Home
+Assistant battery sensors become unavailable. A battery that is removed at runtime disappears on
+the next scrape.
+
+If `status` is readable but `capacity` is not, the status sensor continues to work, the level
+series is omitted, and `battery_level_percent` is `null`. Do not add NUT/UPS, USB access, a
+privileged helper, or `acpi` execution just to make the level available; fix the host source or
+document the limitation.
 
 ### HostPath permissions or missing paths
 
@@ -311,6 +332,7 @@ helper just to make the sensor available.
 - An unreadable hwmon input only removes that temperature reading.
 - An unreadable `/host/proc/1/net` only removes the IPv4 family.
 - An unreadable `power_supply/*/status` only removes that battery reading.
+- An unreadable `power_supply/*/capacity` only removes that battery's level; its status remains.
 
 Do not fix permissions by making the container privileged or running it as root. Fix the host path
 or document the limitation first.
@@ -368,7 +390,7 @@ reconciliation, pod replacement, and Flux drift correction are verified.
 
 - The Home Assistant Scrape UI has no scan-interval field; polling is every 10 minutes. Faster
   polling requires YAML or HACS, which are out of scope.
-- No battery percentage, health, runtime, or UPS/NUT integration.
+- No battery health, cycle count, runtime, or UPS/NUT integration.
 - No Prometheus, Grafana, alerting, recording rules, or long-term metric storage.
 - No per-container, per-pod, or per-application metrics.
 - No IPv6 address reporting.
@@ -383,4 +405,5 @@ reconciliation, pod replacement, and Flux drift correction are verified.
 - [`../specs/002-host-metrics-exporter/contracts/exporter-api.md`](../specs/002-host-metrics-exporter/contracts/exporter-api.md) — exact HTTP and metric contract
 - [`../specs/002-host-metrics-exporter/contracts/home-assistant-ui.md`](../specs/002-host-metrics-exporter/contracts/home-assistant-ui.md) — exact UI field tables
 - [`../specs/002-host-metrics-exporter/quickstart.md`](../specs/002-host-metrics-exporter/quickstart.md) — verification scenarios
+- [`../specs/005-battery-level/contracts/battery-level-additions.md`](../specs/005-battery-level/contracts/battery-level-additions.md) — battery-level metric, JSON, and entity additions
 - [`09-limitations.md`](09-limitations.md) — cluster-wide limitations

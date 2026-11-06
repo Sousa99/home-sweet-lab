@@ -52,6 +52,16 @@ SENSORS = (
         "availability_keys": ("battery",),
     },
     {
+        "key": "battery_level",
+        "name": "Battery level",
+        "unit": "%",
+        "device_class": "battery",
+        "state_class": "measurement",
+        "icon": "mdi:battery",
+        "value_template": "{{ value_json.battery_level_percent }}",
+        "availability_keys": ("battery",),
+    },
+    {
         "key": "tailscale_ipv4",
         "name": "Tailscale IPv4",
         "icon": "mdi:ip-network",

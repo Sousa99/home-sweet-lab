@@ -73,6 +73,8 @@ class BatteryReading:
     status: str
     path: str
     preferred: bool = False
+    level_percent: int | None = None
+    level_path: str | None = None
 
 
 @dataclass(frozen=True)
@@ -318,6 +320,18 @@ def collect_ipv4(net_path: Path | str = HOST_NET, sys_path: Path | str = HOST_SY
     return tuple(readings)
 
 
+def _battery_level(device: Path) -> tuple[int | None, str | None]:
+    capacity_path = device / "capacity"
+    text = _read_text(capacity_path)
+    if text is None:
+        return None, None
+    try:
+        value = int(text.strip())
+    except ValueError:
+        return None, None
+    return max(0, min(100, value)), str(capacity_path)
+
+
 def collect_batteries(sys_path: Path | str = HOST_SYS) -> tuple[BatteryReading, ...]:
     root = Path(sys_path) / "class" / "power_supply"
     if not root.is_dir():
@@ -332,7 +346,16 @@ def collect_batteries(sys_path: Path | str = HOST_SYS) -> tuple[BatteryReading, 
         status = (_read_text(device / "status") or "").strip()
         if not status:
             continue
-        readings.append(BatteryReading(device.name, status, str(device / "status")))
+        level_percent, level_path = _battery_level(device)
+        readings.append(
+            BatteryReading(
+                device.name,
+                status,
+                str(device / "status"),
+                level_percent=level_percent,
+                level_path=level_path,
+            )
+        )
     if not readings:
         return ()
     readings.sort(key=lambda reading: reading.device)
@@ -468,6 +491,21 @@ def render_metrics(snapshot: HostSnapshot) -> str:
         for battery in snapshot.batteries
     ]
     _family(lines, "host_battery_status_info", "Host battery charging/discharging status.", battery_samples)
+    battery_level_samples = [
+        _sample(
+            "host_battery_level_percent",
+            [("device", battery.device), ("path", battery.level_path or "")],
+            battery.level_percent,
+        )
+        for battery in snapshot.batteries
+        if battery.level_percent is not None
+    ]
+    _family(
+        lines,
+        "host_battery_level_percent",
+        "Host battery charge level percentage (0-100).",
+        battery_level_samples,
+    )
     _family(
         lines,
         "host_metrics_battery_available",
@@ -520,12 +558,14 @@ def render_ha(snapshot: HostSnapshot) -> str:
         "ipv4_addresses": addresses,
         "tailscale_ipv4": tailscale_ipv4,
         "battery_status": battery.status if battery is not None else None,
+        "battery_level_percent": battery.level_percent if battery is not None else None,
         "battery_device": battery.device if battery is not None else None,
         "battery_path": battery.path if battery is not None else None,
         "battery_statuses": [
             {
                 "device": reading.device,
                 "status": reading.status,
+                "level_percent": reading.level_percent,
                 "path": reading.path,
                 "preferred": reading.preferred,
             }

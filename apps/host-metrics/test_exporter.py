@@ -40,7 +40,9 @@ def make_snapshot(**overrides: object) -> exporter.HostSnapshot:
                 "BAT0",
                 "Discharging",
                 "/host/sys/class/power_supply/BAT0/status",
-                True,
+                preferred=True,
+                level_percent=87,
+                level_path="/host/sys/class/power_supply/BAT0/capacity",
             ),
         ),
     }
@@ -183,8 +185,10 @@ class ParserTests(unittest.TestCase):
             root = sys_path / "class" / "power_supply"
             write(root / "BAT1" / "type", "Battery\n")
             write(root / "BAT1" / "status", "Discharging\n")
+            write(root / "BAT1" / "capacity", "42\n")
             write(root / "BAT0" / "type", "Battery\n")
             write(root / "BAT0" / "status", "Charging\n")
+            write(root / "BAT0" / "capacity", "87\n")
             write(root / "AC" / "type", "Mains\n")
             write(root / "AC" / "status", "Unknown\n")
             write(root / "BAT2" / "type", "Battery\n")
@@ -192,9 +196,56 @@ class ParserTests(unittest.TestCase):
             readings = exporter.collect_batteries(sys_path)
             self.assertEqual([reading.device for reading in readings], ["BAT0", "BAT1"])
             self.assertEqual(readings[0].status, "Charging")
+            self.assertEqual(readings[0].level_percent, 87)
+            self.assertEqual(
+                readings[0].level_path,
+                str(root / "BAT0" / "capacity"),
+            )
             self.assertTrue(readings[0].preferred)
             self.assertEqual(readings[1].status, "Discharging")
+            self.assertEqual(readings[1].level_percent, 42)
             self.assertFalse(readings[1].preferred)
+
+    def test_battery_level_parsing(self) -> None:
+        cases = (
+            ("87\n", 87),
+            ("0\n", 0),
+            ("100\n", 100),
+            ("123\n", 100),
+            ("-5\n", 0),
+            ("unknown\n", None),
+            (None, None),
+        )
+        for capacity, expected in cases:
+            with self.subTest(capacity=capacity), tempfile.TemporaryDirectory() as directory:
+                sys_path = Path(directory)
+                device = sys_path / "class" / "power_supply" / "BAT0"
+                write(device / "type", "Battery\n")
+                write(device / "status", "Full\n")
+                if capacity is not None:
+                    write(device / "capacity", capacity)
+
+                readings = exporter.collect_batteries(sys_path)
+                self.assertEqual(len(readings), 1)
+                self.assertEqual(readings[0].level_percent, expected)
+                if expected is None:
+                    self.assertIsNone(readings[0].level_path)
+                else:
+                    self.assertEqual(readings[0].level_path, str(device / "capacity"))
+
+    def test_battery_level_unreadable(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            sys_path = Path(directory)
+            device = sys_path / "class" / "power_supply" / "BAT0"
+            write(device / "type", "Battery\n")
+            write(device / "status", "Charging\n")
+            write(device / "capacity", "50\n")
+            os.chmod(device / "capacity", 0)
+
+            readings = exporter.collect_batteries(sys_path)
+            self.assertEqual(len(readings), 1)
+            self.assertIsNone(readings[0].level_percent)
+            self.assertIsNone(readings[0].level_path)
 
     def test_battery_absent(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -273,6 +324,10 @@ class RenderTests(unittest.TestCase):
             'host_battery_status_info{device="BAT0",status="Discharging",path="/host/sys/class/power_supply/BAT0/status"} 1',
             metrics,
         )
+        self.assertIn(
+            'host_battery_level_percent{device="BAT0",path="/host/sys/class/power_supply/BAT0/capacity"} 87',
+            metrics,
+        )
         self.assertIn("host_metrics_battery_available 1", metrics)
         self.assertIn('host_metrics_info{version="1"} 1', metrics)
 
@@ -294,8 +349,62 @@ class RenderTests(unittest.TestCase):
             "host_filesystem_size_bytes",
             "host_network_ipv4_info",
             "host_battery_status_info",
+            "host_battery_level_percent",
         ):
             self.assertNotIn(f"# TYPE {name}", metrics)
+
+    def test_status_only_battery_omits_level(self) -> None:
+        status_only = exporter.BatteryReading(
+            "BAT0",
+            "Full",
+            "/host/sys/class/power_supply/BAT0/status",
+            preferred=True,
+        )
+        snapshot = make_snapshot(batteries=(status_only,))
+        metrics = exporter.render_metrics(snapshot)
+        self.assertIn(
+            'host_battery_status_info{device="BAT0",status="Full",path="/host/sys/class/power_supply/BAT0/status"} 1',
+            metrics,
+        )
+        self.assertNotIn("# TYPE host_battery_level_percent", metrics)
+        self.assertIn("host_metrics_battery_available 1", metrics)
+        self.assertEqual(exporter.readiness(snapshot), (True, "ready"))
+
+        payload = json.loads(exporter.render_ha(snapshot))
+        self.assertEqual(payload["battery_status"], "Full")
+        self.assertIsNone(payload["battery_level_percent"])
+        self.assertIsNone(payload["battery_statuses"][0]["level_percent"])
+
+    def test_multiple_batteries_expose_each_level(self) -> None:
+        batteries = (
+            exporter.BatteryReading(
+                "BAT0",
+                "Charging",
+                "/host/sys/class/power_supply/BAT0/status",
+                preferred=True,
+                level_percent=50,
+                level_path="/host/sys/class/power_supply/BAT0/capacity",
+            ),
+            exporter.BatteryReading(
+                "BAT1",
+                "Full",
+                "/host/sys/class/power_supply/BAT1/status",
+            ),
+        )
+        snapshot = make_snapshot(batteries=batteries)
+        metrics = exporter.render_metrics(snapshot)
+        self.assertIn(
+            'host_battery_level_percent{device="BAT0",path="/host/sys/class/power_supply/BAT0/capacity"} 50',
+            metrics,
+        )
+        self.assertNotIn('host_battery_level_percent{device="BAT1"', metrics)
+
+        payload = json.loads(exporter.render_ha(snapshot))
+        self.assertEqual(payload["battery_level_percent"], 50)
+        self.assertEqual(
+            [entry["level_percent"] for entry in payload["battery_statuses"]],
+            [50, None],
+        )
 
     def test_ha_contract(self) -> None:
         payload = json.loads(exporter.render_ha(make_snapshot()))
@@ -320,6 +429,7 @@ class RenderTests(unittest.TestCase):
             ],
         )
         self.assertEqual(payload["battery_status"], "Discharging")
+        self.assertEqual(payload["battery_level_percent"], 87)
         self.assertEqual(payload["battery_device"], "BAT0")
         self.assertEqual(payload["battery_path"], "/host/sys/class/power_supply/BAT0/status")
         self.assertEqual(
@@ -328,6 +438,7 @@ class RenderTests(unittest.TestCase):
                 {
                     "device": "BAT0",
                     "status": "Discharging",
+                    "level_percent": 87,
                     "path": "/host/sys/class/power_supply/BAT0/status",
                     "preferred": True,
                 }
@@ -354,12 +465,14 @@ class RenderTests(unittest.TestCase):
         self.assertIsNone(payload["tailscale_ipv4"])
         self.assertEqual(payload["ipv4_addresses"], [])
         self.assertIsNone(payload["battery_status"])
+        self.assertIsNone(payload["battery_level_percent"])
         self.assertIsNone(payload["battery_device"])
         self.assertIsNone(payload["battery_path"])
         self.assertEqual(payload["battery_statuses"], [])
 
     def test_readiness(self) -> None:
         self.assertEqual(exporter.readiness(make_snapshot()), (True, "ready"))
+        self.assertEqual(exporter.readiness(make_snapshot(batteries=())), (True, "ready"))
         self.assertEqual(
             exporter.readiness(make_snapshot(memory=None)),
             (False, "not ready: memory unavailable"),
@@ -397,7 +510,9 @@ class HttpTests(unittest.TestCase):
                 self.assertIn("host_metrics_info", response.read().decode())
             with urllib.request.urlopen(self.base + "/ha", timeout=5) as response:
                 self.assertEqual(response.status, 200)
-                self.assertIn("battery_status", json.loads(response.read().decode()))
+                payload = json.loads(response.read().decode())
+                self.assertIn("battery_status", payload)
+                self.assertIn("battery_level_percent", payload)
             with urllib.request.urlopen(self.base + "/readyz", timeout=5) as response:
                 self.assertEqual(response.status, 200)
                 self.assertEqual(response.read().decode(), "ready\n")
