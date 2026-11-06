@@ -1,17 +1,38 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=lib/kubectl-copy.sh
+source "$script_dir/lib/kubectl-copy.sh"
+
 namespace="${DASHBOARD_NAMESPACE:-dashboard}"
 flux_kustomization="${FLUX_APPS_KUSTOMIZATION:-apps}"
 pod="dashboard-backup"
 image="python:3.12-alpine@sha256:b658b05ce9c4eb97ec6fc19424818a1f31993659c2b505a532f470e83807815d"
 dest_root="${DASHBOARD_BACKUP_DIR:-$HOME/backups/home-sweet-lab/dashboard}"
+retries="${DASHBOARD_BACKUP_RETRIES:-5}"
+chunk_size="${DASHBOARD_BACKUP_CHUNK_SIZE:-1048576}"
 stateful_deployments=(
     bus-catcher-rest
     bus-catcher-mcp
     procrastinator-tracker-rest
     procrastinator-tracker-mcp
 )
+
+usage() {
+    cat <<'EOF'
+Usage: pull-dashboard-data.sh [options]
+
+Options:
+  --dest DIR        Destination root (default: ~/backups/home-sweet-lab/dashboard)
+  --retries N       Attempts per chunk before failing (default: 5)
+  --chunk-size N    Bytes per chunk (default: 1048576)
+  -h, --help        Show this help
+
+Environment:
+  DASHBOARD_BACKUP_CHUNK_SIZE  Bytes per chunk (default: 1048576)
+EOF
+}
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -27,12 +48,41 @@ while [ $# -gt 0 ]; do
             dest_root="${1#--dest=}"
             shift
             ;;
+        --retries)
+            if [ $# -lt 2 ]; then
+                echo "--retries requires a number" >&2
+                exit 2
+            fi
+            retries="$2"
+            shift 2
+            ;;
+        --chunk-size)
+            if [ $# -lt 2 ]; then
+                echo "--chunk-size requires a number" >&2
+                exit 2
+            fi
+            chunk_size="$2"
+            shift 2
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
         *)
-            echo "usage: $0 [--dest DIR]" >&2
+            echo "usage: $0 [--dest DIR] [--retries N] [--chunk-size BYTES]" >&2
             exit 2
             ;;
     esac
 done
+
+if ! [[ "$retries" =~ ^[1-9][0-9]*$ ]]; then
+    echo "--retries must be a positive integer" >&2
+    exit 1
+fi
+if ! [[ "$chunk_size" =~ ^[1-9][0-9]*$ ]]; then
+    echo "DASHBOARD_BACKUP_CHUNK_SIZE must be a positive integer" >&2
+    exit 1
+fi
 
 if ! command -v kubectl >/dev/null 2>&1; then
     echo "kubectl is required" >&2
@@ -151,7 +201,12 @@ spec:
 EOF
 
 kubectl -n "$namespace" wait --for=condition=Ready "pod/$pod" --timeout=180s
-kubectl -n "$namespace" exec "$pod" -- sh -c '
+
+exec_in_pod() {
+    kubectl -n "$namespace" exec -c backup "$pod" -- "$@"
+}
+
+exec_in_pod sh -c '
     set -eu
     cd /data
     tar -czf /work/dashboard-data.tar.gz bus-catcher procrastinator
@@ -160,8 +215,18 @@ kubectl -n "$namespace" exec "$pod" -- sh -c '
 '
 
 mkdir -p "$dest"
-kubectl -n "$namespace" cp "$pod:/work/dashboard-data.tar.gz" "$dest/dashboard-data.tar.gz"
-kubectl -n "$namespace" cp "$pod:/work/SHA256SUMS" "$dest/SHA256SUMS"
+
+if ! fetch_file_chunked "$namespace" "$pod" backup \
+    "/work/dashboard-data.tar.gz" "$dest/dashboard-data.tar.gz" "$retries" "$chunk_size"; then
+    echo "Failed to download dashboard-data.tar.gz after $retries attempts" >&2
+    exit 1
+fi
+
+if ! fetch_file_chunked "$namespace" "$pod" backup \
+    "/work/SHA256SUMS" "$dest/SHA256SUMS" "$retries" "$chunk_size"; then
+    echo "Failed to download SHA256SUMS after $retries attempts" >&2
+    exit 1
+fi
 
 if command -v sha256sum >/dev/null 2>&1; then
     (cd "$dest" && sha256sum -c SHA256SUMS)

@@ -109,6 +109,11 @@ kubectl get pods -A
 
 Expected: context `dietpi`, node `dietpi` is `Ready`, and the kube-system pods are running.
 
+For bulk transfers (backup pulls, state bundles), confirm the tailnet path is direct:
+`tailscale ping <dietpi-tailscale-ip>` should report a direct connection, not `via DERP`. A
+DERP-relayed path can reset long-lived `kubectl cp`/exec streams; see
+[08-backups-and-recovery.md](08-backups-and-recovery.md).
+
 ## Lens
 
 1. Open Lens.

@@ -54,6 +54,9 @@ dashboards that are not committed will be overwritten at the next restart.
 - Pulls top-level `config/*.yaml` except `secrets.yaml` and `*.secret.yaml`.
 - Pulls `config/dashboards/**/*.yaml` and `config/packages/**/*.yaml`.
 - Uses the running Home Assistant pod, or a temporary helper pod if Home Assistant is stopped.
+- Pulls each file in chunks with retries and verifies it against the in-pod SHA-256, so a reset
+  exec stream does not leave a truncated YAML file. Use `--retries` or `HASS_CONFIG_CHUNK_SIZE` to
+  tune the transfer.
 - Defaults to a dry run with a unified diff.
 - `--apply` copies changed and new files into the local checkout.
 - Refuses to apply over uncommitted target files unless `--force`.
@@ -67,6 +70,7 @@ Options:
 --force            Apply even if target files have uncommitted changes
 --repo DIR         Home Assistant checkout
 --namespace NAME   Home Assistant namespace
+--retries N        Attempts per chunk before failing (default: 5)
 -h, --help         Show help
 ```
 

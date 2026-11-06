@@ -3,6 +3,8 @@ set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd "$script_dir/.." && pwd)"
+# shellcheck source=lib/kubectl-copy.sh
+source "$script_dir/lib/kubectl-copy.sh"
 
 ha_repo="${HOME_ASSISTANT_REPO:-$repo_root/../home-sweet-home/home-sweet-home-home-assistant}"
 namespace="${HASS_NAMESPACE:-home-assistant}"
@@ -10,6 +12,8 @@ pvc="${HASS_PVC:-home-assistant-config}"
 apply=0
 force=0
 helper_created=0
+retries="${HASS_CONFIG_RETRIES:-5}"
+chunk_size="${HASS_CONFIG_CHUNK_SIZE:-524288}"
 staging="$(mktemp -d)"
 pod=""
 container=""
@@ -27,7 +31,11 @@ Options:
   --repo DIR         Home Assistant checkout
                      (default: ../home-sweet-home/home-sweet-home-home-assistant)
   --namespace NAME   Home Assistant namespace (default: home-assistant)
+  --retries N        Attempts per chunk before failing (default: 5)
   -h, --help         Show this help
+
+Environment:
+  HASS_CONFIG_CHUNK_SIZE  Bytes per chunk (default: 524288)
 
 What is pulled:
   config/*.yaml (except secrets.yaml and *.secret.yaml)
@@ -48,10 +56,24 @@ while [ $# -gt 0 ]; do
         --force) force=1; shift ;;
         --repo) ha_repo="$2"; shift 2 ;;
         --namespace) namespace="$2"; shift 2 ;;
+        --retries) retries="$2"; shift 2 ;;
         -h|--help) usage; exit 0 ;;
         *) echo "unknown option: $1" >&2; usage; exit 1 ;;
     esac
 done
+
+if ! [[ "$retries" =~ ^[1-9][0-9]*$ ]]; then
+    echo "--retries must be a positive integer" >&2
+    exit 1
+fi
+if ! [[ "$chunk_size" =~ ^[1-9][0-9]*$ ]]; then
+    echo "HASS_CONFIG_CHUNK_SIZE must be a positive integer" >&2
+    exit 1
+fi
+if ! command -v kubectl >/dev/null 2>&1; then
+    echo "kubectl is required" >&2
+    exit 1
+fi
 
 if [ ! -d "$ha_repo/config" ]; then
     alt="$repo_root/../home-sweet-home-home-assistant"
@@ -109,6 +131,20 @@ if [ -z "$container" ]; then
     container="home-assistant"
 fi
 
+retry_exec() {
+    local attempt=1
+    while [ "$attempt" -le "$retries" ]; do
+        if "$@"; then
+            return 0
+        fi
+        attempt=$((attempt + 1))
+        if [ "$attempt" -le "$retries" ]; then
+            sleep 1
+        fi
+    done
+    return 1
+}
+
 list_cmd='
 {
   for f in /config/*.yaml; do
@@ -122,7 +158,14 @@ list_cmd='
 } | sort -u
 '
 
-files="$(kubectl -n "$namespace" exec -c "$container" "$pod" -- sh -c "$list_cmd")"
+list_remote_files() {
+    kubectl -n "$namespace" exec -c "$container" "$pod" -- sh -c "$list_cmd"
+}
+
+files="$(retry_exec list_remote_files)" || {
+    echo "Failed to list $namespace/$pod:/config" >&2
+    exit 1
+}
 if [ -z "$files" ]; then
     echo "No allowlisted YAML files found in $namespace/$pod:/config" >&2
     exit 1
@@ -131,7 +174,11 @@ fi
 while IFS= read -r rel; do
     [ -n "$rel" ] || continue
     mkdir -p "$staging/$(dirname "$rel")"
-    kubectl -n "$namespace" cp -c "$container" "$pod:/config/$rel" "$staging/$rel" >/dev/null
+    if ! fetch_file_chunked "$namespace" "$pod" "$container" \
+        "/config/$rel" "$staging/$rel" "$retries" "$chunk_size"; then
+        echo "Failed to fetch $rel after $retries attempts" >&2
+        exit 1
+    fi
 done <<< "$files"
 
 changed=()

@@ -190,9 +190,10 @@ Run from the repository root:
 ./scripts/upload-state-bundle.sh bundles/home-assistant-state-<timestamp>.tar.gz
 ```
 
-The script creates a temporary `ha-upload` pod that mounts the PVC, copies the archive and checksum
-into `/config/import/`, and deletes the pod. The helper pod also triggers `local-path` provisioning
-when the PVC is still `Pending`.
+The script creates a temporary `ha-upload` pod that mounts the PVC, uploads the archive and checksum
+into `/config/import/` in chunks with retries, verifies the remote SHA-256, and deletes the pod. Use
+`--retries` or `HASS_UPLOAD_CHUNK_SIZE` to tune the transfer. The helper pod also triggers
+`local-path` provisioning when the PVC is still `Pending`.
 
 Restart Home Assistant so the restore init container runs. Because Flux manages the Deployment, do
 not use `kubectl rollout restart`; delete the pod and let the ReplicaSet recreate it:
