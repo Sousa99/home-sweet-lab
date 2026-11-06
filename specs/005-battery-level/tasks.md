@@ -120,7 +120,7 @@ multiple-battery, and boundary fixtures; confirm unaffected metrics and availabi
 - [X] T017 [P] Update `docs/09-limitations.md` to remove the "battery percentage out of scope" limitation and state the new supported behavior.
 - [X] T018 [P] Review `specs/005-battery-level/contracts/battery-level-additions.md` against the implemented metric labels, JSON keys, discovery metadata, and ACL entries; fix any mismatch.
 - [X] T019 Run full validation: `python -m unittest discover -s apps/host-metrics -p 'test_*.py'`, `kubectl kustomize apps/host-metrics`, and `kubeconform -strict -summary apps/host-metrics`.
-- [ ] T020 Run the `specs/005-battery-level/quickstart.md` cluster checks: Flux reconciliation, `/metrics`, `/ha`, `/readyz`, seven MQTT discovery messages, state keys, and the Home Assistant entity.
+- [X] T020 Run the `specs/005-battery-level/quickstart.md` cluster checks: Flux reconciliation, `/metrics`, `/ha`, `/readyz`, seven MQTT discovery messages, state keys, and the Home Assistant entity.
 
 ---
 

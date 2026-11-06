@@ -51,11 +51,11 @@ Traefik, Tailscale, a LoadBalancer, a NodePort, or a host port.
 - Broker deletion/restart produced a reconnect and full discovery/state/availability republish.
 - Publishing `homeassistant/status=online` caused the exporter to republish discovery.
 
-Still pending: the manual Home Assistant MQTT integration, the Secret-failure drill, and the
-node-reboot drill. No legacy Scrape integration is currently configured, so no Scrape cleanup is
-needed. The battery-level entity and ACL addition from
-[`../specs/005-battery-level/`](../specs/005-battery-level/) are implemented but not yet deployed
-and verified on the cluster.
+Still pending: the Secret-failure drill and the node-reboot drill. No legacy Scrape integration is
+currently configured, so no Scrape cleanup is needed. The battery-level entity and ACL addition
+from [`../specs/005-battery-level/`](../specs/005-battery-level/) were deployed and verified on
+2026-11-06: seven retained discovery messages, `BAT0` level `100` in the retained state, and the
+Home Assistant entity `sensor.home_sweet_lab_server_battery_level` created by MQTT discovery.
 
 ## 1. Create the MQTT Secret
 
