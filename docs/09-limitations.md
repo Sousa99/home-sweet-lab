@@ -163,6 +163,30 @@ These are deliberate v1 boundaries. They are documented so they are not mistaken
   `bus-catcher` `0.3.0` OOMKilled at the current 10 GiB limit. The bus schedule is stale until a
   maintenance-window refresh with a higher limit or an out-of-cluster ingest. The bus PVC is 10 GiB.
 
+## Agent workload
+
+- The agent runs one stateless replica in the `agent` namespace with no PVC. There is no high
+  availability, backup, or replicated state to restore.
+- The Service is cluster-internal on port 3400. There is no Ingress, public exposure, or probe
+  authentication; Tailscale and cluster access are not used for the agent in v1.
+- `/health` remains bearer-token protected, but the cluster has no reliable NetworkPolicy layer, so
+  any pod that can reach the Service can attempt a request.
+- Caller tokens are generated in `home-sweet-home-agent` and stored as a manual hash-map Secret.
+  There is no automatic rotation, and adding a caller requires recreating the Secret and restarting
+  the pod.
+- The LLM endpoint is a cloud dependency. If it is unreachable, readiness stays `503`; module tool
+  access and the rest of the cluster are unaffected.
+- Home Assistant is an optional fifth MCP source. If its token or endpoint is missing, the agent
+  reports the source unavailable and remains ready.
+- Module MCP sources are consumed through the dashboard namespace Services. Dashboard outages
+  degrade individual tools but do not fail readiness or restart the agent.
+- The agent image is public in GHCR. If it becomes private, a pull Secret and `imagePullSecrets`
+  reference are required or the pod cannot start.
+- Image automation depends on a read-write Flux deploy key; a read-only key silently prevents tag
+  write-back.
+- The agent drains for up to five seconds on `SIGTERM`; the Deployment allows 20 seconds. A stuck
+  request beyond that window is terminated by Kubernetes.
+
 ## Operations
 
 - No Prometheus, Grafana, alerting, log aggregation, or dashboarding beyond Lens, `kubectl`, the
@@ -173,7 +197,9 @@ These are deliberate v1 boundaries. They are documented so they are not mistaken
 - k3s and kube-router have required a service sync restart and a node reboot after network policy
   changes. Treat network policy changes as maintenance-window work and verify controller traffic
   afterward.
-- The other `home-sweet-home-*` workloads (agent and modules) are not migrated in v1; the dashboard stack is documented in [`13-dashboard.md`](13-dashboard.md).
+- The module services remain outside the cluster in v1. The agent is deployed as a Flux-managed
+  workload in [`14-agent.md`](14-agent.md); the dashboard stack is documented in
+  [`13-dashboard.md`](13-dashboard.md).
 
 ## Future work, roughly ordered
 

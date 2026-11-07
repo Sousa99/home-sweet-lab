@@ -21,6 +21,7 @@ else lives on the persistent volume and moves through explicit, documented opera
 | Kubernetes Secrets | Cluster credentials, including `operator-oauth` | Manual `kubectl`; never Git |
 | Dashboard configuration | Household JSON in the manual `dashboard-config` Secret | Manual `kubectl`; never Git; recreate after a rebuild |
 | Dashboard GHCR pull credential | Optional `ghcr-pull` Secret when the dashboard package is private | Manual `kubectl`; never Git |
+| Agent secrets | `agent-auth` caller-token hash map, `agent-llm` API key, optional `agent-home-assistant` long-lived token | Manual `kubectl`; never Git; recreate after a rebuild |
 
 The current Home Assistant configuration has no `secrets.yaml`; verify before assuming one exists.
 `.storage` still contains integration credentials and must be treated as secret.
@@ -125,6 +126,43 @@ kubectl -n dashboard create secret docker-registry ghcr-pull \
 Then add `imagePullSecrets: [{name: ghcr-pull}]` to the frontend pod template in
 `apps/dashboard/frontend.yaml`. Never commit the token. If the package is made public, do not add the
 reference.
+
+### Agent secrets
+
+The agent uses three manual Secrets in the `agent` namespace. The full procedure, probe checks, and
+recovery steps are in [14-agent.md](14-agent.md).
+
+| Secret | Key | Required | Purpose |
+| ------ | --- | -------- | ------- |
+| `agent-auth` | `AGENT_AUTH_TOKENS` | Yes | Single-line JSON map of caller-token SHA-256 hashes |
+| `agent-llm` | `LLM_API_KEY` | Yes | Remote OpenAI-compatible endpoint key |
+| `agent-home-assistant` | `HOME_ASSISTANT_MCP_TOKEN` | No | Home Assistant long-lived access token |
+
+Generate the caller-token hash map in `home-sweet-home-agent`; only the hash map goes into the
+cluster and the plaintext bearer token is delivered to the caller separately. The Deployment expects
+a single-line JSON object in `AGENT_AUTH_TOKENS`, so compact the generated file before creating the
+Secret:
+
+```bash
+cd ~/Desktop/code/home-sweet-home/home-sweet-home-agent
+pnpm token:generate -- --caller-id <caller> --permissions read,write,destructive --out tokens.json
+python3 -c 'import json; print(json.dumps(json.load(open("tokens.json")), separators=(",", ":")))' \
+  > tokens.inline.json
+
+kubectl -n agent create secret generic agent-auth \
+  --from-file=AGENT_AUTH_TOKENS=tokens.inline.json \
+  --dry-run=client -o yaml | kubectl apply -f -
+rm tokens.inline.json
+kubectl -n agent create secret generic agent-llm \
+  --from-literal=LLM_API_KEY='<llm-api-key>' \
+  --dry-run=client -o yaml | kubectl apply -f -
+kubectl -n agent create secret generic agent-home-assistant \
+  --from-literal=HOME_ASSISTANT_MCP_TOKEN='<long-lived-access-token>' \
+  --dry-run=client -o yaml | kubectl apply -f -
+```
+
+The agent image is public in GHCR, so no pull Secret is required. If the package becomes private,
+follow the same pull-secret pattern as the dashboard and document it here.
 
 Rules:
 

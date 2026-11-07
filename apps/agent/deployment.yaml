@@ -1,0 +1,106 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent
+  namespace: agent
+  labels:
+    app.kubernetes.io/name: agent
+    app.kubernetes.io/part-of: home-sweet-lab
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: agent
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: agent
+        app.kubernetes.io/part-of: home-sweet-lab
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 20
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      nodeSelector:
+        kubernetes.io/hostname: dietpi
+        kubernetes.io/arch: amd64
+      containers:
+        - name: agent
+          image: ghcr.io/sousa99/home-sweet-home-agent:main-20261107114114-961f47e  # {"$imagepolicy": "flux-system:agent"}
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: agent-config
+          env:
+            - name: AGENT_AUTH_TOKENS
+              valueFrom:
+                secretKeyRef:
+                  name: agent-auth
+                  key: AGENT_AUTH_TOKENS
+            - name: LLM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: agent-llm
+                  key: LLM_API_KEY
+            - name: HOME_ASSISTANT_MCP_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: agent-home-assistant
+                  key: HOME_ASSISTANT_MCP_TOKEN
+                  optional: true
+          ports:
+            - name: http
+              containerPort: 3400
+              protocol: TCP
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            privileged: false
+            capabilities:
+              drop:
+                - ALL
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 3
+            failureThreshold: 5
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
