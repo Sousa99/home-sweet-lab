@@ -3,8 +3,9 @@
 Ordered setup and recovery documentation for the lab. Documents 01–11 describe the verified and
 deployed state. Document 12 adds the MQTT one-device path and awaits the first GHCR image, the Home
 Assistant MQTT integration, and a maintenance-window node reboot. Document 13 records the dashboard
-stack as deployed and verified; only its node-reboot drill remains a maintenance-window task. The
-destructive full-rebuild drills remain a maintenance-window task.
+stack as deployed and verified; only its node-reboot drill remains a maintenance-window task. Document
+14 records the agent workload as added to Flux and awaiting first reconciliation. The destructive
+full-rebuild drills remain a maintenance-window task.
 
 | Document | Covers | Status |
 | -------- | ------ | ------ |
@@ -21,6 +22,7 @@ destructive full-rebuild drills remain a maintenance-window task.
 | `11-host-metrics.md` | HTTP exporter, metric contract, legacy Scrape UI, recovery | Deployed; legacy Scrape reference |
 | `12-host-metrics-mqtt.md` | MQTT broker, one-device discovery, HA MQTT UI, migration, recovery | Deployed via Flux; HA MQTT UI and reboot pending |
 | `13-dashboard.md` | Dashboard frontend, REST proxy, MCP services, config, backup, recovery | Deployed via Flux; frontend live; backup/restore and failure drills passed; node reboot pending |
+| `14-agent.md` | Agent workload, ConfigMap, probes, secrets, image automation, recovery | Manifests added; awaiting first reconciliation |
 
 Host-specific notes and the ZBT-2 udev rule live in [`../host/dietpi/`](../host/dietpi/).
 
