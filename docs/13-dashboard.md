@@ -1,13 +1,16 @@
 # 13 — Dashboard stack
 
-Status: Flux reconciled dashboard `0.2.0` and the paired backend pins (bus-catcher `0.3.0`,
-fly-over-tracker `0.6.0`, procrastinator-tracker `0.3.0`, weather-psychic `0.2.0`) on 2026-11-02.
-All nine workloads and both PVCs are Ready; the frontend, four REST proxy routes, four MCP
-initialize calls, data persistence, backup/restore, and node-reboot recovery pass.
+Status: pinned `bus-catcher` `0.4.0` on 2026-11-09; rollout is pending because the Flux
+controllers were unavailable. The last verified dashboard state is `0.2.0` with the paired backend
+pins (bus-catcher `0.3.0`, fly-over-tracker `0.6.0`, procrastinator-tracker `0.3.0`,
+weather-psychic `0.2.0`) reconciled on 2026-11-02. All nine workloads and both PVCs were Ready; the
+frontend, four REST proxy routes, four MCP initialize calls, data persistence, backup/restore, and
+node-reboot recovery passed.
 
 Known issue: the bus GTFS refresh with `bus-catcher` `0.3.0` was OOMKilled at the 10 GiB limit. The
-existing bus database remains served but is stale (last refresh 2026-10-26); the bus block will be
-empty until a maintenance-window refresh with a higher memory limit or an out-of-cluster ingest.
+existing bus database remains served but is stale (last refresh 2026-10-26). `bus-catcher` `0.4.0`
+is pinned to replace the in-memory ingest with streaming, memory-bounded loading and automatic
+schedule refresh; the refresh has not yet been verified on the cluster.
 
 ## What runs
 
@@ -54,7 +57,7 @@ or MCP ingress, CORS configuration, or authentication in v1.
 | Component | Pin |
 | --------- | --- |
 | Dashboard frontend | `ghcr.io/sousa99/home-sweet-home-dashboard:0.2.0` |
-| Bus backend | `ghcr.io/sousa99/bus-catcher-backend:0.3.0` |
+| Bus backend | `ghcr.io/sousa99/bus-catcher-backend:0.4.0` |
 | Fly-over backend | `ghcr.io/sousa99/fly-over-tracker-backend:0.6.0` |
 | Procrastinator backend | `ghcr.io/sousa99/procrastinator-tracker-backend:0.3.0` |
 | Weather backend | `ghcr.io/sousa99/weather-psychic-backend:0.2.0` |
@@ -184,10 +187,11 @@ Tasks start empty; an empty deck is valid. Create a task through the module API/
 deck is needed. The bus/task SQLite files live on their PVCs and survive pod replacement.
 
 The Carris feed is about 77 MB compressed and 974 MB uncompressed, including an 807 MB
-`stop_times.txt`. The ingest unzips and parses it in memory. `bus-catcher-rest` therefore has an 8 GiB
-memory limit and the bus PVC is 10 GiB; the other module containers stay at 512 MiB. The first
-attempts OOMKilled at 512 MiB and 2 GiB. If the ingest still fails, check `bus-catcher-rest` logs and
-events before retrying.
+`stop_times.txt`. `bus-catcher` `0.3.0` unzipped and parsed it in memory and was OOMKilled at the
+10 GiB limit. `bus-catcher` `0.4.0` streams the feed so memory stays bounded. `bus-catcher-rest`
+keeps a 10 GiB memory limit and the bus PVC is 10 GiB; the other module containers stay at 512 MiB.
+The first attempts under `0.3.0` OOMKilled at 512 MiB and 2 GiB. If the refresh still fails, check
+`bus-catcher-rest` logs and events before retrying.
 
 ## REST proxy contract
 

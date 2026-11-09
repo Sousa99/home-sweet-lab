@@ -1,12 +1,13 @@
 # 06 — Home Assistant
 
-Status: deployed and verified on 2026-10-25.
+Status: image pin updated to `main-20261109193052-7e131ee` on 2026-11-09; rollout is pending because
+the Flux controllers were unavailable. The verified state below is from 2026-10-25.
 
 ## Current state
 
 | Item | Current |
 | ---- | ------- |
-| Image | `ghcr.io/sousa99/home-sweet-home-home-assistant:main-20261025090622-dd38b4b` |
+| Image | `ghcr.io/sousa99/home-sweet-home-home-assistant:main-20261109193052-7e131ee` (pinned; rollout pending) |
 | Deployment | 1/1 ready, strategy `Recreate` |
 | PVC | `home-assistant-config`, 10 GiB, `Bound` on `local-path` |
 | Ingress | Tailscale Ingress class, `https://home-assistant.<tailnet>.ts.net/` returns `200`; `http://dietpi/` returns `404` |
@@ -436,6 +437,19 @@ Verified on 2026-10-25:
 - `.storage/http` contains `use_x_forwarded_for: true` and the two cluster CIDRs.
 - The Home Assistant process holds `/dev/zbt2`; `zigbee.db` was updated at startup.
 - Flux image automation selected `main-20261025090622-dd38b4b`.
+
+### 2026-11-09 image update
+
+The Deployment now pins `main-20261109193052-7e131ee`. The expected seeding behavior is that the
+normal `seed-config` init container is sufficient: it copies `/config-seed` into `/config` on every
+pod start, and the rollout restarts the pod. No state-bundle upload or manual `/config` copy is
+planned. The new image adds tracked configuration and the `home_sweet_home_agent` custom component;
+the config entry and Assist pipeline selection remain manual `.storage` steps.
+
+This has not yet been verified on the cluster because the Flux controllers could not reach the
+Kubernetes API at the time of the update. Run the verification in
+`specs/007-update-workload-images/quickstart.md` after Flux recovers, then replace this paragraph
+with the observed result.
 
 Inside the pod:
 
