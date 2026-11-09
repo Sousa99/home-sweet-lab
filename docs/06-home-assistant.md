@@ -1,13 +1,13 @@
 # 06 — Home Assistant
 
-Status: image pin updated to `main-20261109193052-7e131ee` on 2026-11-09; rollout is pending because
-the Flux controllers were unavailable. The verified state below is from 2026-10-25.
+Status: image updated and verified on 2026-11-09. The last cluster verification before this update was
+2026-10-25.
 
 ## Current state
 
 | Item | Current |
 | ---- | ------- |
-| Image | `ghcr.io/sousa99/home-sweet-home-home-assistant:main-20261109193052-7e131ee` (pinned; rollout pending) |
+| Image | `ghcr.io/sousa99/home-sweet-home-home-assistant:main-20261109193052-7e131ee` |
 | Deployment | 1/1 ready, strategy `Recreate` |
 | PVC | `home-assistant-config`, 10 GiB, `Bound` on `local-path` |
 | Ingress | Tailscale Ingress class, `https://home-assistant.<tailnet>.ts.net/` returns `200`; `http://dietpi/` returns `404` |
@@ -440,16 +440,23 @@ Verified on 2026-10-25:
 
 ### 2026-11-09 image update
 
-The Deployment now pins `main-20261109193052-7e131ee`. The expected seeding behavior is that the
-normal `seed-config` init container is sufficient: it copies `/config-seed` into `/config` on every
-pod start, and the rollout restarts the pod. No state-bundle upload or manual `/config` copy is
-planned. The new image adds tracked configuration and the `home_sweet_home_agent` custom component;
-the config entry and Assist pipeline selection remain manual `.storage` steps.
+Verified on 2026-11-09:
 
-This has not yet been verified on the cluster because the Flux controllers could not reach the
-Kubernetes API at the time of the update. Run the verification in
-`specs/007-update-workload-images/quickstart.md` after Flux recovers, then replace this paragraph
-with the observed result.
+- The Deployment rolled out `main-20261109193052-7e131ee` and reached `1/1` Ready with zero restarts.
+- `seed-config`, `restore-state`, and `configure-http` all exited `0`. `seed-config` was silent,
+  `restore-state` applied no bundle, and `configure-http` reported `already configured`.
+- The seed installed the new tracked configuration, including
+  `/config/custom_components/home_sweet_home_agent/manifest.json`, `conversation.py`, and the new
+  automations.
+- Home Assistant logged the expected custom-integration warning for `home_sweet_home_agent`.
+- `.storage/core.config_entries`, `zigbee.db`, and the recorder database were preserved;
+  `secrets.yaml` was absent before and after.
+- No state-bundle upload or manual `/config` copy was required. The normal `seed-config` initializer
+  is sufficient for this image update.
+
+The `home_sweet_home_agent` integration is installed and available, but its config entry is not
+created yet. Add it in the UI with the agent URL and bearer token, then select it as the Assist
+conversation agent. Both values live in `.storage` and remain manual operator steps.
 
 Inside the pod:
 
@@ -464,6 +471,12 @@ kubectl -n home-assistant exec deploy/home-assistant -- \
   published and Flux updates the Deployment.
 - **Image rollback:** commit the previous image tag in `apps/home-assistant/deployment.yaml` and
   reconcile. Do not use `kubectl set image` as the permanent fix.
+- **Image rollback after 2026-11-09:** reverting only the image tag does not work. The new image
+  upgraded `.storage/http` to version 3, and `main-20261025090622-dd38b4b` supports only version 2,
+  so it fails with `UnsupportedStorageVersionError` and never becomes Ready. To roll back, restore
+  the pre-upgrade state bundle or a Home Assistant backup together with the image, or return to the
+  new image. The rollback drill on 2026-11-09 confirmed this behavior; the new image was restored
+  immediately.
 - **Home Assistant upgrade:** the base image tracks `stable`. Pin a digest or version tag if
   upgrades need to be deliberate. Read release notes and back up before a major version.
 - **Failed restore:** the init container must not leave a half-applied archive marked as applied.

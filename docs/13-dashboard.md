@@ -1,16 +1,15 @@
 # 13 — Dashboard stack
 
-Status: pinned `bus-catcher` `0.4.0` on 2026-11-09; rollout is pending because the Flux
-controllers were unavailable. The last verified dashboard state is `0.2.0` with the paired backend
-pins (bus-catcher `0.3.0`, fly-over-tracker `0.6.0`, procrastinator-tracker `0.3.0`,
-weather-psychic `0.2.0`) reconciled on 2026-11-02. All nine workloads and both PVCs were Ready; the
-frontend, four REST proxy routes, four MCP initialize calls, data persistence, backup/restore, and
-node-reboot recovery passed.
+Status: Flux reconciled `bus-catcher` `0.4.0` on 2026-11-09 with dashboard `0.2.0`,
+fly-over-tracker `0.6.0`, procrastinator-tracker `0.3.0`, and weather-psychic `0.2.0`. All nine
+workloads and both PVCs are Ready. The bus refresh completed without an OOMKill and the bus data is
+current.
 
-Known issue: the bus GTFS refresh with `bus-catcher` `0.3.0` was OOMKilled at the 10 GiB limit. The
-existing bus database remains served but is stale (last refresh 2026-10-26). `bus-catcher` `0.4.0`
-is pinned to replace the in-memory ingest with streaming, memory-bounded loading and automatic
-schedule refresh; the refresh has not yet been verified on the cluster.
+Known issue: the bus GTFS refresh with `bus-catcher` `0.3.0` was OOMKilled at the 10 GiB limit, and
+the bus database stayed stale from 2026-10-26. On 2026-11-09, `bus-catcher` `0.4.0` completed the
+refresh with streaming, memory-bounded ingest and automatic schedule loading: `lastRefresh` is
+`2026-11-09T20:21:14Z`, `feedVersion` is `bc424576ada0`, `stale` is `false`, and `refreshError` is
+null.
 
 ## What runs
 
@@ -248,7 +247,7 @@ kubectl -n dashboard delete pod \
 
 ## Updates and rollback
 
-The current release is dashboard `0.2.0`, paired with bus-catcher `0.3.0`, fly-over-tracker
+The current release is dashboard `0.2.0`, paired with bus-catcher `0.4.0`, fly-over-tracker
 `0.6.0`, procrastinator-tracker `0.3.0`, and weather-psychic `0.2.0`. Update those pins together for
 this release; a `0.2.0` dashboard with the older backend images can render but may call APIs the old
 backends do not provide. The `0.2.0` image also adds optional `flights.tileLayers` and `layout`

@@ -36,7 +36,7 @@ verified independently.
 
 **⚠️ CRITICAL**: No user story work should begin until this phase is complete.
 
-- [ ] T003 [P] Confirm the `apps` Flux Kustomization is Ready and `bus-catcher-data` and `home-assistant-config` PVCs are Bound using `specs/007-update-workload-images/contracts/runtime-verification.md`
+- [X] T003 [P] Confirm the `apps` Flux Kustomization is Ready and `bus-catcher-data` and `home-assistant-config` PVCs are Bound using `specs/007-update-workload-images/contracts/runtime-verification.md`
 - [X] T004 [P] Run `./scripts/validate.sh` to establish a passing pre-change baseline for `apps/` and `infrastructure/`
 
 **Checkpoint**: The cluster and repository are ready; US1 and US2 can proceed independently.
@@ -57,12 +57,12 @@ confirm data remains after deleting the REST pod.
 - [X] T005 [P] [US1] Change the bus REST image from `0.3.0` to `0.4.0` in `apps/dashboard/bus-catcher-rest.yaml`
 - [X] T006 [P] [US1] Change the bus MCP image from `0.3.0` to `0.4.0` in `apps/dashboard/bus-catcher-mcp.yaml`
 - [X] T007 [US1] Render `apps/dashboard` with `kubectl kustomize` and confirm both bus Deployments reference `0.4.0` and no other fields changed, per `specs/007-update-workload-images/quickstart.md`
-- [ ] T008 [US1] Commit both bus pin changes, reconcile Flux, and wait for `bus-catcher-rest` and `bus-catcher-mcp` rollouts using `specs/007-update-workload-images/quickstart.md`
-- [ ] T009 [US1] Verify the running pod images, REST `/api/health`, and MCP readiness per `specs/007-update-workload-images/contracts/runtime-verification.md`
-- [ ] T010 [US1] Force a bus refresh with `POST /api/refresh?force=true`, poll `/api/status` until complete, and confirm `lastRefresh` advances with no `OOMKilled` per `specs/007-update-workload-images/contracts/runtime-verification.md`
-- [ ] T011 [US1] Initialize the bus MCP server and compare a configured stop between REST and MCP, confirming no concurrent-ingest or database-lock error per `specs/007-update-workload-images/contracts/runtime-verification.md`
-- [ ] T012 [US1] Delete the `bus-catcher-rest` pod, wait for replacement, and confirm `lastRefresh`, `feedVersion`, and configured stops persist per `specs/007-update-workload-images/contracts/runtime-verification.md`
-- [ ] T013 [US1] Verify the dashboard proxy path `/api/bus/api/health` still returns `200` per `specs/007-update-workload-images/contracts/runtime-verification.md`
+- [X] T008 [US1] Commit both bus pin changes, reconcile Flux, and wait for `bus-catcher-rest` and `bus-catcher-mcp` rollouts using `specs/007-update-workload-images/quickstart.md`
+- [X] T009 [US1] Verify the running pod images, REST `/api/health`, and MCP readiness per `specs/007-update-workload-images/contracts/runtime-verification.md`
+- [X] T010 [US1] Force a bus refresh with `POST /api/refresh?force=true`, poll `/api/status` until complete, and confirm `lastRefresh` advances with no `OOMKilled` per `specs/007-update-workload-images/contracts/runtime-verification.md`
+- [X] T011 [US1] Initialize the bus MCP server and compare a configured stop between REST and MCP, confirming no concurrent-ingest or database-lock error per `specs/007-update-workload-images/contracts/runtime-verification.md`
+- [X] T012 [US1] Delete the `bus-catcher-rest` pod, wait for replacement, and confirm `lastRefresh`, `feedVersion`, and configured stops persist per `specs/007-update-workload-images/contracts/runtime-verification.md`
+- [X] T013 [US1] Verify the dashboard proxy path `/api/bus/api/health` still returns `200` per `specs/007-update-workload-images/contracts/runtime-verification.md`
 
 **Checkpoint**: bus-catcher 0.4.0 is independently deployed, refreshed, consistent, and persistent.
 
@@ -81,12 +81,12 @@ preserved, and Home Assistant is Ready with the integration available.
 
 - [X] T014 [US2] Change all four Home Assistant image references to `main-20261109193052-7e131ee` in `apps/home-assistant/deployment.yaml`, preserving every image marker
 - [X] T015 [US2] Render `apps/home-assistant` and confirm all four references use the new tag and retain `# {"$imagepolicy": "flux-system:home-assistant"}`, per `specs/007-update-workload-images/quickstart.md`
-- [ ] T016 [US2] Commit the Home Assistant pin change, reconcile Flux, and wait for the `home-assistant` rollout using `specs/007-update-workload-images/quickstart.md`
-- [ ] T017 [US2] Inspect the `seed-config`, `restore-state`, and `configure-http` init-container logs and confirm all exit `0` with no newly applied bundle per `specs/007-update-workload-images/contracts/runtime-verification.md`
-- [ ] T018 [P] [US2] Verify the custom component files and new automations exist under `/config` per `specs/007-update-workload-images/contracts/runtime-verification.md`
-- [ ] T019 [P] [US2] Verify `.storage/core.config_entries`, `zigbee.db`, the recorder database, and `secrets.yaml` presence match the pre-change baseline per `specs/007-update-workload-images/contracts/runtime-verification.md`
-- [ ] T020 [US2] Verify Home Assistant readiness, `/manifest.json`, and that the `Home Sweet Home Agent` integration is available without a destructive state reset per `specs/007-update-workload-images/contracts/runtime-verification.md`
-- [ ] T021 [US2] Record the evidence-based seeding conclusion and any remaining manual integration/Assist pipeline steps in `docs/06-home-assistant.md`
+- [X] T016 [US2] Commit the Home Assistant pin change, reconcile Flux, and wait for the `home-assistant` rollout using `specs/007-update-workload-images/quickstart.md`
+- [X] T017 [US2] Inspect the `seed-config`, `restore-state`, and `configure-http` init-container logs and confirm all exit `0` with no newly applied bundle per `specs/007-update-workload-images/contracts/runtime-verification.md`
+- [X] T018 [P] [US2] Verify the custom component files and new automations exist under `/config` per `specs/007-update-workload-images/contracts/runtime-verification.md`
+- [X] T019 [P] [US2] Verify `.storage/core.config_entries`, `zigbee.db`, the recorder database, and `secrets.yaml` presence match the pre-change baseline per `specs/007-update-workload-images/contracts/runtime-verification.md`
+- [X] T020 [US2] Verify Home Assistant readiness, `/manifest.json`, and that the `Home Sweet Home Agent` integration is available without a destructive state reset per `specs/007-update-workload-images/contracts/runtime-verification.md`
+- [X] T021 [US2] Record the evidence-based seeding conclusion and any remaining manual integration/Assist pipeline steps in `docs/06-home-assistant.md`
 
 **Checkpoint**: Home Assistant runs the new image with preserved state, and the seeding question is answered with evidence.
 
@@ -103,10 +103,10 @@ references remain.
 
 ### Implementation for User Story 3
 
-- [ ] T022 [P] [US3] Update the bus pin, resolved OOM outcome, refresh behavior, and 10 GiB memory-limit text in `docs/13-dashboard.md`
-- [ ] T023 [P] [US3] Update the current image pin, verification date, and seed decision summary in `docs/06-home-assistant.md`
+- [X] T022 [P] [US3] Update the bus pin, resolved OOM outcome, refresh behavior, and 10 GiB memory-limit text in `docs/13-dashboard.md`
+- [X] T023 [P] [US3] Update the current image pin, verification date, and seed decision summary in `docs/06-home-assistant.md`
 - [X] T024 [US3] Cross-check `docs/06-home-assistant.md` and `docs/13-dashboard.md` against `apps/dashboard/bus-catcher-*.yaml` and `apps/home-assistant/deployment.yaml` for stale pins or contradictory statements
-- [ ] T025 [US3] Run `./scripts/validate.sh` and commit the documentation updates for `docs/06-home-assistant.md` and `docs/13-dashboard.md`
+- [X] T025 [US3] Run `./scripts/validate.sh` and commit the documentation updates for `docs/06-home-assistant.md` and `docs/13-dashboard.md`
 
 **Checkpoint**: Documentation is reproducible from a clean checkout and matches the deployed pins.
 
@@ -116,10 +116,10 @@ references remain.
 
 **Purpose**: Final safety checks and recovery validation across both stories.
 
-- [ ] T026 [P] Review the full repository diff for secrets, tailnet identifiers, private state, and unrelated changes using `specs/007-update-workload-images/contracts/runtime-verification.md`
-- [ ] T027 Exercise the rollback drill for both bus workloads and Home Assistant, then restore the new pins, per `specs/007-update-workload-images/contracts/runtime-verification.md`
-- [ ] T028 Re-run `./scripts/validate.sh` on the final tree and record the passing result in `specs/007-update-workload-images/tasks.md`
-- [ ] T029 Verify every success criterion SC-001 through SC-010 in `specs/007-update-workload-images/spec.md` against the recorded evidence and note any exception
+- [X] T026 [P] Review the full repository diff for secrets, tailnet identifiers, private state, and unrelated changes using `specs/007-update-workload-images/contracts/runtime-verification.md`
+- [X] T027 Exercise the rollback drill for both bus workloads and Home Assistant, then restore the new pins, per `specs/007-update-workload-images/contracts/runtime-verification.md`
+- [X] T028 Re-run `./scripts/validate.sh` on the final tree and record the passing result in `specs/007-update-workload-images/tasks.md`
+- [X] T029 Verify every success criterion SC-001 through SC-010 in `specs/007-update-workload-images/spec.md` against the recorded evidence and note any exception
 
 ---
 
@@ -230,24 +230,52 @@ Task: "Update docs/06-home-assistant.md"
 
 ## Implementation Status (2026-11-09)
 
-Completed locally:
+All 29 tasks are complete. Deployment commit: `2d0b590` on `main`.
 
-- T001, T002, T004: target images verified public, baseline captured, and `./scripts/validate.sh`
-  passed before and after the manifest edits.
-- T005-T007: both bus Deployments render with `bus-catcher-backend:0.4.0`.
-- T014-T015: all four Home Assistant references render with
-  `main-20261109193052-7e131ee` and retain their image markers.
-- Partial T022-T023: declared pins, refresh behavior, memory-limit text, and the expected seeding
-  behavior are updated. The verification outcome remains pending.
-- T024: documentation cross-check completed; no stale declared pins remain.
+### Cluster recovery
 
-Blocked at T003 and therefore T008-T013, T016-T021, T025-T029:
+The first rollout attempt was blocked because the node's Wi-Fi IP changed from `10.75.166.142` to
+`10.78.20.142`, leaving the Kubernetes API service endpoint stale. Pods received `ECONNREFUSED` on
+`10.43.0.1:443`, and every Flux controller was crash-looping. Restarting k3s re-registered the new
+node IP; Flux returned to Ready and reported `apps`, `infrastructure`, and `flux-system` Ready at
+revision `2d0b590`.
 
-- The `apps` Flux Kustomization is not Ready because the `infrastructure` Kustomization is not ready.
-- All Flux controllers are in `CrashLoopBackOff` and report that the Kubernetes API at
-  `10.43.0.1:443` refuses connections. The source controller also reports a DNS failure resolving
-  `github.com`.
-- No commit, push, reconciliation, rollout, or live image verification was performed. The cluster is
-  still running the previous images.
-- After Flux recovers, rerun `/speckit.implement` or execute `quickstart.md` from step 4 and replace
-  the pending verification paragraphs in `docs/06-home-assistant.md` and `docs/13-dashboard.md`.
+### Bus verification
+
+- Both Deployments run `ghcr.io/sousa99/bus-catcher-backend:0.4.0` with zero restarts.
+- REST `/api/health` returned `200`; the dashboard proxy path returned `200`.
+- The forced/automatic refresh completed with `lastRefresh=2026-11-09T20:21:14.878Z`,
+  `feedVersion=bc424576ada0`, `stale=false`, `refreshError=null`, and no `OOMKilled` event.
+- MCP initialize returned `200` with `serverInfo.name=bus-catcher`; `get_stop_times` returned values
+  identical to REST for stop `170057`.
+- Deleting the REST pod preserved `lastRefresh`, `feedVersion`, and the configured stop list.
+- Rollback drill: both bus Deployments ran `0.3.0` and returned to Ready, then the `0.4.0` pins were
+  restored and became Ready again.
+
+### Home Assistant verification
+
+- The Deployment runs `main-20261109193052-7e131ee` with zero restarts and is Ready.
+- `seed-config`, `restore-state`, and `configure-http` exited `0`; no state bundle was applied and no
+  manual `/config` copy was needed.
+- `/config/custom_components/home_sweet_home_agent/manifest.json`, `conversation.py`, and the new
+  automations are present.
+- `.storage/core.config_entries`, `zigbee.db`, and the recorder database were preserved;
+  `secrets.yaml` was absent before and after.
+- Home Assistant logged the expected custom-integration warning, confirming the adapter loaded.
+- The integration is available but its config entry and Assist pipeline selection remain manual UI
+  steps stored in `.storage`.
+
+### Rollback exception
+
+The Home Assistant image rollback drill exposed a real constraint. Reverting the image alone to
+`main-20261025090622-dd38b4b` fails because the new image upgraded `.storage/http` to version 3 and
+the old image supports only version 2 (`UnsupportedStorageVersionError`). The new image was restored
+immediately and verified Ready. A Home Assistant image rollback now requires restoring the
+pre-upgrade state bundle or a backup together with the image. This is recorded in
+`docs/06-home-assistant.md`.
+
+### Success criteria
+
+- SC-001 through SC-009 pass.
+- SC-010 passes for bus-catcher. The Home Assistant image-only rollback exception above applies, so a
+  safe rollback requires state restoration and is not a pin-only operation.
